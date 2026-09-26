@@ -1,11 +1,11 @@
 {% extends "base.html" %}{% block title %}مدير إعلان الكود الذهبي{% endblock %}{% block body %}
-<div class="row" style="justify-content:space-between"><h2>📣 مدير إعلان الكود الذهبي</h2>
-<div class="row"><a class="btn ghost" href="{{ page }}" target="_blank">الصفحة</a><a class="btn wa" href="https://wa.me/{{ wa }}" target="_blank">واتساب</a></div></div>
+<div class="box c-sun hero-box" style="min-height:0"><div class="row" style="justify-content:space-between"><div class="row"><span class="emoji">📣</span><h2>مدير إعلان الكود الذهبي</h2></div>
+<div class="row"><a class="btn ghost" href="{{ page }}" target="_blank">الصفحة</a><a class="btn wa" href="https://wa.me/{{ wa }}" target="_blank">واتساب</a></div></div></div>
 <div class="grid">
-<div class="card stat"><span class="mute">كل الطلبيات</span><b>{{ s.n }}</b></div>
-<div class="card stat"><span class="mute">جديدة</span><b>{{ s.new or 0 }}</b></div>
-<div class="card stat"><span class="mute">مسلّمة</span><b>{{ s.done or 0 }}</b></div>
-<div class="card stat"><span class="mute">الإيراد / المصروف</span><b>{{ '%.0f'|format(s.revenue) }} / {{ '%.0f'|format(spent) }}</b></div></div>
+<div class="card stat"><span>كل الطلبيات</span><b>{{ s.n }}</b></div>
+<div class="card stat"><span>جديدة</span><b>{{ s.new or 0 }}</b></div>
+<div class="card stat"><span>مسلّمة</span><b>{{ s.done or 0 }}</b></div>
+<div class="card stat"><span>الإيراد / المصروف</span><b>{{ '%.0f'|format(s.revenue) }} / {{ '%.0f'|format(spent) }}</b></div></div>
 
 <div class="card"><div class="row" style="justify-content:space-between"><h3>الحملات</h3><a class="btn" href="{{ url_for('goldencode.campaign') }}">+ حملة</a></div>
 <div class="scroll"><table><tr><th>الحملة</th><th>الحالة</th><th>مصروف/ميزانية</th><th>وصول</th><th>نقرات</th><th>طلبيات</th><th>كلفة الطلب</th><th>رابط الإعلان</th></tr>

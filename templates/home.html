@@ -1,4 +1,5 @@
 {% extends "base.html" %}{% block body %}
-<h2>لوحة الإدارة</h2><div class="grid">
-{% for t, d, i, u in tools %}<a class="card" href="{{ u }}"><div style="font-size:2em">{{ i }}</div><b>{{ t }}</b><div class="mute">{{ d }}</div></a>{% endfor %}
-</div>{% endblock %}
+<div class="boxes">{% for t, d, i, u in tools %}
+<a class="box {{ ['c-sun','c-ocean','c-violet','c-teal','c-ember'][loop.index0 % 5] }}" style="--i:{{ loop.index0 }}" href="{{ u }}">
+<span class="emoji">{{ i }}</span><h3>{{ t }}</h3><div class="lbl">{{ d }}</div></a>{% endfor %}</div>
+{% endblock %}
