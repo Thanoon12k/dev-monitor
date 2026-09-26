@@ -151,3 +151,67 @@ def campaign(cid=None):
         d.commit()
         return redirect(url_for(".dashboard"))
     return render_template("goldencode/campaign.html", c=row)
+
+
+# ---------- Facebook page link ----------
+
+PAGE_ID = "423528124186043"
+GRAPH = "https://graph.facebook.com/v21.0/"
+
+
+def _graph(path, token, **params):
+    import json
+    import urllib.request
+    params["access_token"] = token
+    url = GRAPH + path + "?" + urllib.parse.urlencode(params)
+    try:
+        with urllib.request.urlopen(url, timeout=20) as r:
+            return json.load(r)
+    except urllib.error.HTTPError as e:
+        return json.load(e)
+
+
+@bp.route("/facebook", methods=["GET", "POST"])
+@login_required
+def facebook():
+    from app import load_cfg, save_cfg
+    c = load_cfg()
+    if request.method == "POST":
+        check_csrf()
+        tok = request.form.get("token", "").strip()
+        # A user token is swapped for the Golden Code page token (never expires if the user token is long-lived).
+        res = _graph("me/accounts", tok, fields="id,name,access_token")
+        page = next((p for p in res.get("data", []) if p["id"] == PAGE_ID), None)
+        if page:
+            tok = page["access_token"]
+        info = _graph(PAGE_ID, tok, fields="name")
+        if "error" in info:
+            flash("التوكن ما اشتغل: " + info["error"].get("message", ""))
+        else:
+            c["fb_page_token"] = tok
+            save_cfg(c)
+            flash("✅ انربطت صفحة " + info["name"])
+        return redirect(url_for(".facebook"))
+    tok = c.get("fb_page_token")
+    page = posts = convs = debug = None
+    if tok:
+        page = _graph(PAGE_ID, tok, fields="name,fan_count,followers_count,link")
+        posts = _graph(PAGE_ID + "/posts", tok, fields="message,created_time,permalink_url,comments.summary(true).limit(0),"
+                       "reactions.summary(true).limit(0)", limit=10).get("data", [])
+        convs = _graph(PAGE_ID + "/conversations", tok, fields="participants,snippet,updated_time,link",
+                       limit=15).get("data", [])
+        debug = _graph("debug_token", tok, input_token=tok).get("data", {})
+    return render_template("goldencode/facebook.html", page=page, posts=posts, convs=convs, debug=debug, page_id=PAGE_ID)
+
+
+@bp.route("/facebook/import", methods=["POST"])
+@login_required
+def fb_import():
+    """Turn a Messenger conversation into an order."""
+    check_csrf()
+    db().execute("INSERT INTO orders(name,phone,service,details,created) VALUES(?,?,?,?,?)",
+                 (request.form.get("name", "")[:100], "ماسنجر", "رسالة من الصفحة",
+                  request.form.get("details", "")[:1000], now()))
+    db().commit()
+    flash("انضاف كطلب")
+    return redirect(url_for(".dashboard"))

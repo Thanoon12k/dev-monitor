@@ -1,0 +1,22 @@
+{% extends "base.html" %}{% block body %}
+<div class="box c-ocean hero-box" style="min-height:0"><div class="row" style="justify-content:space-between">
+<div class="row"><span class="emoji">🔗</span><h2>ربط صفحة الكود الذهبي</h2></div>
+<a class="btn ghost" href="{{ url_for('goldencode.dashboard') }}">رجوع للوحة</a></div></div>
+<div class="card"><form method="post"><input type="hidden" name="csrf" value="{{ csrf }}">
+<label>الصق التوكن من Graph API Explorer (بعد ما تضغط Extend Access Token)</label>
+<div class="row"><input name="token" type="password" required style="flex:1"><button>ربط</button></div></form>
+{% if debug %}<p class="mute">صلاحية التوكن: {% if debug.expires_at == 0 %}✅ دائم{% elif debug.expires_at %}ينتهي {{ debug.expires_at }}{% endif %} · {{ "صالح" if debug.is_valid else "غير صالح" }}</p>{% endif %}</div>
+{% if page and page.name %}<div class="grid">
+<div class="card stat"><span>الصفحة</span><b>{{ page.name }}</b></div>
+<div class="card stat"><span>المتابعين</span><b>{{ page.followers_count }}</b></div>
+<div class="card stat"><span>الإعجابات</span><b>{{ page.fan_count }}</b></div></div>
+<div class="card"><h3>الرسائل الأخيرة</h3><div class="scroll"><table>
+{% for c in convs %}{% set who = c.participants.data[0].name %}<tr><td><b>{{ who }}</b><div class="mute">{{ c.updated_time[:16].replace('T',' ') }}</div></td><td>{{ c.snippet }}</td>
+<td><form method="post" action="{{ url_for('goldencode.fb_import') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="name" value="{{ who }}"><input type="hidden" name="details" value="{{ c.snippet }}"><button>+ طلب</button></form>
+<a class="mute" href="https://business.facebook.com{{ c.link }}" target="_blank">فتح</a></td></tr>
+{% else %}<tr><td class="mute">ما أكو رسائل أو التوكن ما بيه pages_messaging</td></tr>{% endfor %}</table></div></div>
+<div class="card"><h3>آخر البوستات</h3><div class="scroll"><table><tr><th>البوست</th><th>تفاعل</th><th>تعليقات</th></tr>
+{% for p in posts %}<tr><td><a href="{{ p.permalink_url }}" target="_blank">{{ (p.message or '—')[:90] }}</a><div class="mute">{{ p.created_time[:10] }}</div></td>
+<td>{{ p.reactions.summary.total_count if p.reactions }}</td><td>{{ p.comments.summary.total_count if p.comments }}</td></tr>{% endfor %}</table></div></div>
+{% elif page %}<div class="flash">{{ page.error.message }}</div>{% endif %}
+{% endblock %}
