@@ -1,0 +1,4 @@
+{% extends "base.html" %}{% block body %}
+<h2>لوحة الإدارة</h2><div class="grid">
+{% for t, d, i, u in tools %}<a class="card" href="{{ u }}"><div style="font-size:2em">{{ i }}</div><b>{{ t }}</b><div class="mute">{{ d }}</div></a>{% endfor %}
+</div>{% endblock %}

@@ -1,0 +1,14 @@
+{% extends "base.html" %}{% block body %}<div class="card" style="max-width:600px">
+<h2>{{ "تعديل حملة" if c else "حملة جديدة" }}</h2><form method="post"><input type="hidden" name="csrf" value="{{ csrf }}">
+<label>الاسم</label><input name="name" value="{{ c.name if c }}" required>
+<label>المنصة</label><input name="platform" value="{{ c.platform if c else 'Facebook/Instagram' }}">
+<div class="grid">
+<div><label>الميزانية ($)</label><input name="budget" type="number" step="any" value="{{ c.budget if c else 0 }}"></div>
+<div><label>المصروف ($)</label><input name="spent" type="number" step="any" value="{{ c.spent if c else 0 }}"></div>
+<div><label>الوصول</label><input name="reach" type="number" value="{{ c.reach if c else 0 }}"></div>
+<div><label>النقرات</label><input name="clicks" type="number" value="{{ c.clicks if c else 0 }}"></div>
+<div><label>البداية</label><input name="start_date" type="date" value="{{ c.start_date if c }}"></div>
+<div><label>النهاية</label><input name="end_date" type="date" value="{{ c.end_date if c }}"></div></div>
+<label>الحالة</label><select name="status">{% for v,l in [('active','شغالة'),('paused','متوقفة'),('ended','منتهية')] %}<option value="{{v}}" {% if c and c.status==v %}selected{% endif %}>{{l}}</option>{% endfor %}</select>
+<label>ملاحظات</label><textarea name="notes" rows="3">{{ c.notes if c }}</textarea><br><br>
+<button>حفظ</button> <a class="btn ghost" href="{{ url_for('goldencode.dashboard') }}">رجوع</a></form></div>{% endblock %}

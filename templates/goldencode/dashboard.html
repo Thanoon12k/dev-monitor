@@ -1,0 +1,29 @@
+{% extends "base.html" %}{% block title %}مدير إعلان الكود الذهبي{% endblock %}{% block body %}
+<div class="row" style="justify-content:space-between"><h2>📣 مدير إعلان الكود الذهبي</h2>
+<div class="row"><a class="btn ghost" href="{{ page }}" target="_blank">الصفحة</a><a class="btn wa" href="https://wa.me/{{ wa }}" target="_blank">واتساب</a></div></div>
+<div class="grid">
+<div class="card stat"><span class="mute">كل الطلبيات</span><b>{{ s.n }}</b></div>
+<div class="card stat"><span class="mute">جديدة</span><b>{{ s.new or 0 }}</b></div>
+<div class="card stat"><span class="mute">مسلّمة</span><b>{{ s.done or 0 }}</b></div>
+<div class="card stat"><span class="mute">الإيراد / المصروف</span><b>{{ '%.0f'|format(s.revenue) }} / {{ '%.0f'|format(spent) }}</b></div></div>
+
+<div class="card"><div class="row" style="justify-content:space-between"><h3>الحملات</h3><a class="btn" href="{{ url_for('goldencode.campaign') }}">+ حملة</a></div>
+<div class="scroll"><table><tr><th>الحملة</th><th>الحالة</th><th>مصروف/ميزانية</th><th>وصول</th><th>نقرات</th><th>طلبيات</th><th>كلفة الطلب</th><th>رابط الإعلان</th></tr>
+{% for c in camps %}<tr><td><a href="{{ url_for('goldencode.campaign', cid=c.id) }}">{{ c.name }}</a><div class="mute">{{ c.platform }}</div></td>
+<td>{{ c.status }}</td><td>{{ c.spent }} / {{ c.budget }}</td><td>{{ c.reach }}</td><td>{{ c.clicks }}</td><td>{{ c.n_orders }}</td>
+<td>{{ '%.2f'|format(c.spent / c.n_orders) if c.n_orders else '—' }}</td>
+<td><input readonly value="{{ url_for('goldencode.order', c=c.id, _external=True, _scheme='https') }}" onclick="this.select()"></td></tr>
+{% else %}<tr><td colspan="8" class="mute">ما أكو حملات بعد</td></tr>{% endfor %}</table></div></div>
+
+<div class="card"><h3>الطلبيات</h3><div class="row"><a class="tag {{ 'new' if not cur }}" href="?">الكل</a>
+{% for v,l in statuses %}<a class="tag {{ 'new' if cur==v }}" href="?status={{v}}">{{ l }}</a>{% endfor %}</div>
+<div class="scroll"><table><tr><th>#</th><th>الزبون</th><th>الطلب</th><th>الحملة</th><th>الحالة والسعر</th></tr>
+{% for o in orders %}<tr><td>{{ o.id }}<div class="mute">{{ o.created }}</div></td>
+<td>{{ o.name }}<div class="mute">{{ o.phone }}</div><a class="btn wa" target="_blank" href="{{ gc_wa(o.phone, 'مرحبا ' ~ o.name ~ '، وياك الكود الذهبي بخصوص طلبك') }}">واتساب</a></td>
+<td><b>{{ o.service }}</b><div class="mute">{{ o.details }}</div></td><td>{{ o.campaign or '—' }}</td>
+<td><form method="post" action="{{ url_for('goldencode.update_order', oid=o.id) }}" class="row"><input type="hidden" name="csrf" value="{{ csrf }}">
+<select name="status">{% for v,l in statuses %}<option value="{{v}}" {% if o.status==v %}selected{% endif %}>{{l}}</option>{% endfor %}</select>
+<input name="price" type="number" step="any" value="{{ o.price }}" style="width:90px" title="السعر"><button>حفظ</button></form></td></tr>
+{% else %}<tr><td colspan="5" class="mute">ما أكو طلبيات بعد. شارك رابط الإعلان.</td></tr>{% endfor %}</table></div>
+<p class="mute">رابط الطلب العام: <a href="{{ url_for('goldencode.order') }}">{{ url_for('goldencode.order', _external=True, _scheme='https') }}</a></p></div>
+{% endblock %}

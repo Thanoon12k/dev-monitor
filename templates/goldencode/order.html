@@ -1,0 +1,12 @@
+{% extends "base.html" %}{% block title %}الكود الذهبي | اطلب الآن{% endblock %}{% block body %}
+<div class="card" style="max-width:480px;margin:0 auto">
+<h2>✨ الكود الذهبي</h2><p class="mute">سجّل طلبك وراح نتواصل وياك على واتساب.</p>
+<form method="post"><input type="hidden" name="c" value="{{ request.args.get('c','') }}">
+<input name="website" style="display:none" tabindex="-1" autocomplete="off">
+<label>الاسم</label><input name="name" required>
+<label>رقم الموبايل (واتساب)</label><input name="phone" type="tel" required placeholder="07xxxxxxxxx">
+<label>الخدمة المطلوبة</label><input name="service" placeholder="مثلاً: تصميم، موقع، تطبيق">
+<label>التفاصيل</label><textarea name="details" rows="4"></textarea><br><br>
+<button>إرسال الطلب</button>
+<a class="btn wa" href="https://wa.me/{{ wa }}" target="_blank">واتساب مباشر</a></form>
+<p class="mute"><a href="{{ page }}" target="_blank">صفحتنا على فيسبوك</a></p></div>{% endblock %}
