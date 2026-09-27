@@ -10,7 +10,7 @@
 <div class="row"><input name="token" type="password" placeholder="123456:ABC..." style="flex:1">
 <input name="chat_id" value="{{ cfg.chat_id or default_chat }}" style="width:160px"><button>ربط</button></div></form>
 <form method="post"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="chat_id" value="{{ cfg.chat_id or default_chat }}">
-<label>قناة تيليجرام للنشر التلقائي (البوت لازم يكون أدمن) — فارغ = يرجعلك المنشور تنشره بيدك</label>
+<label>اختياري: قناة تيليجرام تريد المنشور ينتشر بيها هم (غير الفيسبوك). اكتب @اسم_القناة وضيف البوت أدمن بيها. إذا تتركها فارغة ماكو مشكلة، النشر يصير على الفيسبوك بس</label>
 <input name="channel" value="{{ cfg.channel or '' }}" placeholder="@my_channel">
 <label>فيسبوك: {% if fb %}ينشر على صفحة {{ 'Golden Code' if fb == '423528124186043' else fb }} ✅{% else %}متوقف{% endif %} — اتركها فارغة لصفحة Golden Code، أو حط Page ID + token لصفحة ثانية</label>
 <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="fb_off" value="1" style="width:auto" {{ 'checked' if cfg.fb_off }}> إيقاف النشر على فيسبوك</label>
