@@ -18,7 +18,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 FONT = os.path.join(HERE, "fonts", "Cairo.ttf")
 W, H, PAD = 1080, 1350, 80
 RAQM = features.check("raqm")
-BRAND = os.environ.get("VIRALIQ_BRAND", "Viraliq · رائج")
+BRAND = os.environ.get("VIRALIQ_BRAND", "Golden Code · الكود الذهبي")
 
 # kind -> (top colour, bottom colour, accent, default badge)
 THEMES = {
@@ -155,7 +155,7 @@ def render(spec, out):
     # footer
     d.rectangle((0, footer_top + 30, W, H), fill=(0, 0, 0, 90))
     rtl(d, right, footer_top + 62, BRAND, font(38, 900), acc + (255,))
-    note = spec.get("footer") or "تابعنا ليوصلك كل جديد"
+    note = spec.get("footer") or "تابع الصفحة ليوصلك كل جديد"
     d.text((PAD, footer_top + 70), shape(note), font=font(30, 600), fill=(255, 255, 255, 200),
            **({"direction": "rtl"} if RAQM else {}))
     img.save(out, "PNG", optimize=True)

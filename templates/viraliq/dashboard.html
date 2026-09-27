@@ -1,6 +1,6 @@
 {% extends "base.html" %}{% block body %}
 <div class="box c-ember hero-box" style="min-height:0"><div class="row" style="justify-content:space-between">
-<div class="row"><span class="emoji">🔥</span><h2>رائج · Viraliq</h2></div>
+<div class="row"><span class="emoji">🔥</span><h2>رائج · منشورات Golden Code</h2></div>
 <span class="lbl">{% if cfg.token %}متصل بـ @{{ cfg.bot }}{% else %}البوت غير مربوط{% endif %}</span></div></div>
 <div class="grid">
 {% for k, n in [('pending','بانتظار موافقتك'),('approved','مجدولة'),('published','منشورة'),('cancelled','ملغاة')] %}
@@ -12,7 +12,8 @@
 <form method="post"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="chat_id" value="{{ cfg.chat_id or default_chat }}">
 <label>قناة تيليجرام للنشر التلقائي (البوت لازم يكون أدمن) — فارغ = يرجعلك المنشور تنشره بيدك</label>
 <input name="channel" value="{{ cfg.channel or '' }}" placeholder="@my_channel">
-<label>فيسبوك: Page ID + Page token (اختياري)</label>
+<label>فيسبوك: {% if fb %}ينشر على صفحة {{ 'Golden Code' if fb == '423528124186043' else fb }} ✅{% else %}متوقف{% endif %} — اتركها فارغة لصفحة Golden Code، أو حط Page ID + token لصفحة ثانية</label>
+<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="fb_off" value="1" style="width:auto" {{ 'checked' if cfg.fb_off }}> إيقاف النشر على فيسبوك</label>
 <div class="row"><input name="fb_page" value="{{ cfg.fb_page or '' }}" style="width:220px"><input name="fb_token" type="password" placeholder="{{ 'محفوظ ✓' if cfg.fb_token else 'EAA...' }}" style="flex:1"><button>حفظ</button></div></form></div>
 <div class="card"><h3>المنشورات</h3><div class="scroll"><table><tr><th></th><th>المنشور</th><th>الحالة</th></tr>
 {% for p in posts %}<tr><td style="width:110px"><a href="{{ url_for('viraliq.image', pid=p.id) }}" target="_blank"><img src="{{ url_for('viraliq.image', pid=p.id) }}" style="width:100px;border-radius:10px"></a></td>

@@ -4,8 +4,9 @@ Drafts arrive as data/viraliq/inbox/<id>.json (+ <id>.png), uploaded by the
 scheduled Claude routine through the PythonAnywhere files API (submit.py).
 /viraliq/tick ingests them, sends each to the owner's Telegram with buttons
 (approve / edit / time / cancel), and publishes approved posts that are due.
-Publishing goes to a Telegram channel and/or a Facebook page when configured;
-otherwise the bot hands the final post back to the owner to post by hand.
+Publishing goes to the Golden Code Facebook page (using the page token the
+Golden Code tool already stores) and/or a Telegram channel; with neither, the
+bot hands the final post back to the owner to post by hand.
 """
 import fcntl
 import json
@@ -31,6 +32,7 @@ TZ = timezone(timedelta(hours=3))  # Baghdad, no DST
 TG = "https://api.telegram.org/bot{}/{}"
 GRAPH = "https://graph.facebook.com/v21.0/"
 DEFAULT_CHAT = "647908098"
+GOLDEN_PAGE = "423528124186043"  # facebook.com/goldencode114
 
 
 # ---------- storage ----------
@@ -167,6 +169,15 @@ def say(cfg, text, **kw):
 
 # ---------- publishing ----------
 
+def fb_target(cfg):
+    """(page id, token): explicit Viraliq settings, else the linked Golden Code page."""
+    if cfg.get("fb_page") and cfg.get("fb_token"):
+        return cfg["fb_page"], cfg["fb_token"]
+    from app import load_cfg
+    tok = load_cfg().get("fb_page_token")
+    return (GOLDEN_PAGE, tok) if tok and not cfg.get("fb_off") else (None, None)
+
+
 def publish(cfg, p):
     text, img, done = full_text(p), os.path.join(IMG, p["image"]), []
     if cfg.get("channel"):
@@ -177,11 +188,12 @@ def publish(cfg, p):
                 r = tg(cfg, "sendPhoto", files={"photo": f}, chat_id=cfg["channel"])
                 r = r if not r.get("ok") else tg(cfg, "sendMessage", chat_id=cfg["channel"], text=text[:4096])
         done.append(f"تيليجرام {cfg['channel']}: " + ("✅" if r.get("ok") else f"❌ {r.get('description')}"))
-    if cfg.get("fb_page") and cfg.get("fb_token"):
+    page, token = fb_target(cfg)
+    if page:
         try:
             with open(img, "rb") as f:
-                r = requests.post(GRAPH + cfg["fb_page"] + "/photos", files={"source": f}, timeout=60,
-                                  data={"caption": text, "access_token": cfg["fb_token"]}).json()
+                r = requests.post(GRAPH + page + "/photos", files={"source": f}, timeout=60,
+                                  data={"caption": text, "access_token": token}).json()
         except (requests.RequestException, ValueError) as e:
             r = {"error": {"message": str(e)}}
         done.append("فيسبوك: " + ("✅" if r.get("id") else f"❌ {r.get('error', {}).get('message')}"))
@@ -386,7 +398,8 @@ def dashboard():
     rep = tick()
     cfg, posts = _load(CFG, {}), _load(POSTS, [])
     return render_template("viraliq/dashboard.html", cfg=cfg, posts=list(reversed(posts))[:60],
-                           rep=rep, fmt=fmt, status_line=status_line, default_chat=DEFAULT_CHAT)
+                           rep=rep, fmt=fmt, status_line=status_line, default_chat=DEFAULT_CHAT,
+                           fb=fb_target(cfg)[0])
 
 
 @bp.route("/img/<int:pid>.png")
