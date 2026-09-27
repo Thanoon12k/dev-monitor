@@ -7,7 +7,9 @@ them to the owner on Telegram for approval. You never publish directly.
 
 ## Setup
 ```bash
-git fetch -q origin claude/funny-meitner-cwakir && git checkout -q FETCH_HEAD -- tools/viraliq 2>/dev/null || true
+# work from a fresh copy of the tools (the session may not have the repo checked out)
+rm -rf /tmp/vq && git clone -q --depth 1 -b claude/funny-meitner-cwakir https://github.com/Thanoon12k/dev-monitor /tmp/vq
+cd /tmp/vq
 pip install -q pillow requests
 python tools/viraliq/submit.py history   # what was already posted + next course day
 ```
