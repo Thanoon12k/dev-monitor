@@ -20,14 +20,13 @@ W, H, PAD = 1080, 1350, 80
 RAQM = features.check("raqm")
 BRAND = os.environ.get("VIRALIQ_BRAND", "Golden Code · الكود الذهبي")
 
-# kind -> (top colour, bottom colour, accent, default badge)
-THEMES = {
-    "trend": ((255, 92, 57), (40, 12, 40), (255, 190, 90), "ترند اليوم"),
-    "news": ((29, 78, 216), (8, 14, 40), (56, 189, 248), "خبر تقني"),
-    "course": ((15, 118, 110), (6, 30, 32), (94, 234, 212), "دورة مجانية"),
-    "tip": ((109, 40, 217), (20, 10, 40), (216, 180, 254), "نصيحة اليوم"),
-    "debate": ((190, 24, 93), (30, 8, 24), (253, 164, 175), "جدل السوشيال"),
-}
+# Golden Code identity: near-black with warm gold, as on the page cover.
+BG_TOP, BG_BOTTOM = (10, 8, 5), (38, 28, 10)
+GOLD_HI, GOLD_LO = (250, 214, 110), (200, 140, 24)
+GOLD = (239, 193, 76)
+LOGO = os.path.join(HERE, "assets", "logo.png")
+BADGES = {"trend": "ترند اليوم", "news": "خبر تقني", "course": "دورة مجانية",
+          "tip": "نصيحة اليوم", "debate": "جدل السوشيال"}
 
 
 def font(size, weight=700):
@@ -81,58 +80,89 @@ def fit(text, width, max_lines, start, low):
     return low, wrap(text, font(low, 900), width)[:max_lines]
 
 
-def gradient(c1, c2):
-    img = Image.new("RGB", (W, H))
+def gradient(size, c1, c2):
+    w, h = size
+    img = Image.new("RGB", size)
     d = ImageDraw.Draw(img)
-    for y in range(H):
-        t = y / H
-        d.line([(0, y), (W, y)], fill=tuple(int(a + (b - a) * t) for a, b in zip(c1, c2)))
+    for y in range(h):
+        t = y / max(h - 1, 1)
+        d.line([(0, y), (w, y)], fill=tuple(int(a + (b - a) * t) for a, b in zip(c1, c2)))
     return img
 
 
-def render(spec, out):
-    c1, c2, acc, badge = THEMES.get(spec.get("kind"), THEMES["trend"])
-    img = gradient(c1, c2)
+def gold_text(img, x, y, text, f):
+    """Right-aligned text at x filled with the vertical gold gradient."""
+    mask = Image.new("L", img.size, 0)
+    kw = {"direction": "rtl"} if RAQM else {}
+    ImageDraw.Draw(mask).text((x, y), shape(text), font=f, fill=255, anchor="ra", **kw)
+    box = mask.getbbox()
+    if box:
+        fill = gradient((box[2] - box[0], box[3] - box[1]), GOLD_HI, GOLD_LO)
+        img.paste(fill, box[:2], mask.crop(box))
 
-    # soft glow blobs
+
+def logo(size):
+    im = Image.open(LOGO).convert("RGB").resize((size, size), Image.LANCZOS)
+    m = Image.new("L", (size, size), 0)
+    ImageDraw.Draw(m).ellipse((0, 0, size - 1, size - 1), fill=255)
+    return im, m
+
+
+def render(spec, out):
+    img = gradient((W, H), BG_TOP, BG_BOTTOM)
+
+    # warm glow + faint grid + code glyphs, like the cover
     glow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     g = ImageDraw.Draw(glow)
-    g.ellipse((-260, -200, 520, 520), fill=acc + (70,))
-    g.ellipse((640, 820, 1380, 1560), fill=c1 + (90,))
-    img.paste(glow.filter(ImageFilter.GaussianBlur(120)), (0, 0), glow.filter(ImageFilter.GaussianBlur(120)))
+    g.ellipse((-300, -250, 600, 600), fill=GOLD + (60,))
+    g.ellipse((500, 950, 1400, 1700), fill=GOLD + (40,))
+    glow = glow.filter(ImageFilter.GaussianBlur(140))
+    img.paste(glow, (0, 0), glow)
     d = ImageDraw.Draw(img, "RGBA")
-    for x in range(40, W, 48):  # dotted texture
-        for y in range(40, H, 48):
-            d.ellipse((x, y, x + 3, y + 3), fill=(255, 255, 255, 18))
+    for x in range(0, W, 60):
+        d.line([(x, 0), (x, H)], fill=GOLD + (10,))
+    for y in range(0, H, 60):
+        d.line([(0, y), (W, y)], fill=GOLD + (10,))
+    marks = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    md, mono = ImageDraw.Draw(marks), font(64, 800)
+    for txt, xy in (("</>", (440, 88)), ("#", (40, 470)), ("AI", (80, 1100)), ("fn", (930, 1100))):
+        md.text(xy, txt, font=mono, fill=GOLD + (28,))
+    img.paste(marks, (0, 0), marks)
+    d = ImageDraw.Draw(img, "RGBA")
 
     right = W - PAD
-    # badge chip + date
+    # logo (top-left) and gold-outlined pill with green dot (top-right)
+    lg, lm = logo(96)
+    img.paste(lg, (PAD, 70), lm)
+    d.ellipse((PAD - 3, 67, PAD + 99, 169), outline=GOLD + (140,), width=3)
     bf = font(34, 800)
-    label = spec.get("badge") or badge
-    bw = tlen(bf, label) + 56
-    d.rounded_rectangle((right - bw, 80, right, 146), 33, fill=acc + (255,))
-    rtl(d, right - 28, 86, label, bf, (20, 12, 20))
-    date = spec.get("date") or (datetime.now(timezone.utc) + timedelta(hours=3)).strftime("%Y/%m/%d")
-    d.text((PAD, 96), date, font=font(30, 600), fill=(255, 255, 255, 170))
+    label = spec.get("badge") or BADGES.get(spec.get("kind"), BADGES["trend"])
+    bw = tlen(bf, label) + 92
+    d.rounded_rectangle((right - bw, 86, right, 152), 33, fill=(20, 15, 8, 230), outline=GOLD + (170,), width=2)
+    d.ellipse((right - 44, 111, right - 28, 127), fill=(74, 222, 128))
+    rtl(d, right - 60, 90, label, bf, GOLD)
 
-    # title
+    # title: white, last line in gold (single line -> all gold)
     size, lines = fit(spec["title"], W - 2 * PAD, 4, 92, 52)
     tf = font(size, 900)
-    y = 200
-    for ln in lines:
-        rtl(d, right + 3, y + 4, ln, tf, (0, 0, 0, 90))
-        rtl(d, right, y, ln, tf, (255, 255, 255))
+    y = 215
+    for i, ln in enumerate(lines):
+        if i == len(lines) - 1:
+            gold_text(img, right, y, ln, tf)
+        else:
+            rtl(d, right, y, ln, tf, (255, 255, 255))
         y += int(size * 1.45)
-    d.rounded_rectangle((right - 150, y + 8, right, y + 18), 5, fill=acc + (255,))
-    y += 48
+    y += 34
+    d.line([(right - 360, y), (right, y)], fill=GOLD + (200,), width=3)
+    y += 34
 
     hook = spec.get("hook")
     if hook:
         hf = font(38, 600)
         for ln in wrap(hook, hf, W - 2 * PAD)[:3]:
-            rtl(d, right, y, ln, hf, (255, 255, 255, 215))
+            rtl(d, right, y, ln, hf, (235, 226, 205))
             y += 60
-        y += 20
+        y += 22
 
     # numbered point cards
     pf = font(34, 700)
@@ -142,21 +172,22 @@ def render(spec, out):
         h = 44 + 52 * len(lines)
         if y + h > footer_top - 20:
             break
-        d.rounded_rectangle((PAD, y, right, y + h), 26, fill=(255, 255, 255, 30), outline=(255, 255, 255, 50), width=2)
+        d.rounded_rectangle((PAD, y, right, y + h), 24, fill=(255, 220, 140, 14), outline=GOLD + (70,), width=2)
         cx = right - 50
-        d.ellipse((cx - 30, y + h / 2 - 30, cx + 30, y + h / 2 + 30), fill=acc + (255,))
-        d.text((cx, y + h / 2), str(i), font=font(34, 900), fill=(20, 12, 20), anchor="mm")
+        d.ellipse((cx - 30, y + h / 2 - 30, cx + 30, y + h / 2 + 30), fill=GOLD)
+        d.text((cx, y + h / 2), str(i), font=font(34, 900), fill=(15, 11, 5), anchor="mm")
         ty = y + 18
         for ln in lines:
             rtl(d, right - 100, ty, ln, pf, (255, 255, 255))
             ty += 52
         y += h + 18
 
-    # footer
-    d.rectangle((0, footer_top + 30, W, H), fill=(0, 0, 0, 90))
-    rtl(d, right, footer_top + 62, BRAND, font(38, 900), acc + (255,))
+    # footer: gold rule, brand in gold, page link
+    d.rectangle((0, footer_top + 30, W, H), fill=(0, 0, 0, 120))
+    d.line([(0, footer_top + 30), (W, footer_top + 30)], fill=GOLD + (120,), width=2)
+    gold_text(img, right, footer_top + 60, BRAND, font(40, 900))
     note = spec.get("footer") or "تابع الصفحة ليوصلك كل جديد"
-    d.text((PAD, footer_top + 70), shape(note), font=font(30, 600), fill=(255, 255, 255, 200),
+    d.text((PAD, footer_top + 70), shape(note), font=font(30, 600), fill=(235, 226, 205),
            **({"direction": "rtl"} if RAQM else {}))
     img.save(out, "PNG", optimize=True)
     return out
