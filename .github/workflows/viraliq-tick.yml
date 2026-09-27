@@ -1,0 +1,10 @@
+name: viraliq tick
+# Publishes approved Viraliq posts on time (the hub has no clock of its own).
+on:
+  schedule: [{cron: "*/10 * * * *"}]
+  workflow_dispatch:
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl -fsS https://apps1monitor.pythonanywhere.com/viraliq/tick

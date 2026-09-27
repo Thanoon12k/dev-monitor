@@ -1,0 +1,22 @@
+{% extends "base.html" %}{% block body %}
+<div class="box c-ember hero-box" style="min-height:0"><div class="row" style="justify-content:space-between">
+<div class="row"><span class="emoji">🔥</span><h2>رائج · Viraliq</h2></div>
+<span class="lbl">{% if cfg.token %}متصل بـ @{{ cfg.bot }}{% else %}البوت غير مربوط{% endif %}</span></div></div>
+<div class="grid">
+{% for k, n in [('pending','بانتظار موافقتك'),('approved','مجدولة'),('published','منشورة'),('cancelled','ملغاة')] %}
+<div class="card stat"><span>{{ n }}</span><b>{{ posts|selectattr('status','equalto',k)|list|length }}</b></div>{% endfor %}</div>
+<div class="card"><h3>ربط البوت</h3><form method="post"><input type="hidden" name="csrf" value="{{ csrf }}">
+<label>توكن بوت تيليجرام (من BotFather)</label>
+<div class="row"><input name="token" type="password" placeholder="123456:ABC..." style="flex:1">
+<input name="chat_id" value="{{ cfg.chat_id or default_chat }}" style="width:160px"><button>ربط</button></div></form>
+<form method="post"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="chat_id" value="{{ cfg.chat_id or default_chat }}">
+<label>قناة تيليجرام للنشر التلقائي (البوت لازم يكون أدمن) — فارغ = يرجعلك المنشور تنشره بيدك</label>
+<input name="channel" value="{{ cfg.channel or '' }}" placeholder="@my_channel">
+<label>فيسبوك: Page ID + Page token (اختياري)</label>
+<div class="row"><input name="fb_page" value="{{ cfg.fb_page or '' }}" style="width:220px"><input name="fb_token" type="password" placeholder="{{ 'محفوظ ✓' if cfg.fb_token else 'EAA...' }}" style="flex:1"><button>حفظ</button></div></form></div>
+<div class="card"><h3>المنشورات</h3><div class="scroll"><table><tr><th></th><th>المنشور</th><th>الحالة</th></tr>
+{% for p in posts %}<tr><td style="width:110px"><a href="{{ url_for('viraliq.image', pid=p.id) }}" target="_blank"><img src="{{ url_for('viraliq.image', pid=p.id) }}" style="width:100px;border-radius:10px"></a></td>
+<td><b>#{{ p.id }} {{ p.title }}</b><div class="mute" style="white-space:pre-line">{{ p.text[:220] }}…</div></td>
+<td class="mute">{{ status_line(p) }}{% for r in p.result or [] %}<div>{{ r }}</div>{% endfor %}</td></tr>
+{% else %}<tr><td class="mute" colspan="3">لسه ماكو منشورات. أول دفعة توصل الساعة 8.</td></tr>{% endfor %}</table></div></div>
+{% endblock %}
