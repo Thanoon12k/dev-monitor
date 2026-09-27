@@ -3,7 +3,7 @@
 set -euo pipefail
 T="${apps1monitor_PA_TOKEN:?}"; U=apps1monitor; A="https://www.pythonanywhere.com/api/v0/user/$U"
 cd "$(dirname "$0")"
-for f in $(git ls-files | grep -v -E '^(deploy.sh|\.gitignore|\.github/.*|tools/viraliq/(fonts/.*|poster.py|submit.py|ROUTINE.md))$'); do
+for f in $(git ls-files | grep -v -E '^(deploy.sh|\.gitignore|\.github/.*|tools/viraliq/((fonts|assets)/.*|poster.py|submit.py|ROUTINE.md))$'); do
   curl -sf -H "Authorization: Token $T" -F "content=@$f" "$A/files/path/home/$U/hub/$f" >/dev/null && echo "up $f"
 done
 printf 'import sys\nsys.path.insert(0, "/home/%s/hub")\nfrom wsgi import application  # noqa\n' "$U" > /tmp/pa_wsgi.py
