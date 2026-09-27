@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8">
-<title>مكتب المحترف — تصفير الاستلال</title>
+<title>مكتب المحترف — تقليل وتصفير الاستلال والذكاء</title>
 <style>
 %%FONTS%%
 :root{
@@ -36,40 +36,43 @@ body{width:var(--W);height:var(--H);overflow:hidden;font-family:'Readex Pro',san
 .loc svg{width:26px;height:26px;color:var(--yellow)}
 
 /* headline */
-.kicker{align-self:flex-start;display:inline-flex;align-items:center;gap:12px;margin-top:40px;font-size:27px;font-weight:600;color:var(--yellow);
+.kicker{align-self:flex-start;display:inline-flex;align-items:center;gap:12px;margin-top:34px;font-size:27px;font-weight:600;color:var(--yellow);
   border:2px solid rgba(253,219,7,.5);background:rgba(253,219,7,.07);padding:10px 22px;border-radius:999px}
 .kicker svg{width:32px;height:32px}
 .headline{font-family:Alexandria;font-weight:900;font-size:var(--h1,104px);line-height:1.12;margin:var(--h1-mt,34px) 0 0;letter-spacing:-1px}
-.headline .hl{color:var(--yellow)}
+.headline .l1{display:block;color:var(--yellow)}
+.headline .l2{display:block;font-size:var(--h2r,.52em);line-height:1.3;margin-top:6px;letter-spacing:0}
 .sub{margin:14px 0 0;font-size:33px;font-weight:500;color:var(--muted)}
 .tii{font-family:Alexandria;font-weight:800;color:var(--white);background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);padding:0 14px 4px;border-radius:12px;display:inline-block}
 
-/* hero */
-.hero{display:flex;align-items:center;gap:44px;margin-top:38px}
-.gauge{position:relative;width:var(--g,330px);height:var(--g,330px);flex:none}
-.gauge::before{content:"";position:absolute;inset:-18%;border-radius:50%;background:radial-gradient(circle,rgba(253,219,7,.30) 0%,rgba(253,219,7,.08) 45%,transparent 70%);opacity:var(--glow,1)}
-.burst{position:absolute;inset:0;border-radius:50%;border:6px solid var(--yellow);opacity:0;pointer-events:none}
+/* meters */
+.meters{align-self:center;display:flex;justify-content:center;gap:var(--mgap,70px);margin-top:var(--m-mt,34px)}
+.meter{display:flex;flex-direction:column;align-items:center;gap:14px}
+.m-label{font-family:Alexandria;font-weight:700;font-size:var(--ml,29px);line-height:1.2}
+.gauge{position:relative;width:var(--g,232px);height:var(--g,232px);flex:none}
+.gauge::before{content:"";position:absolute;inset:-18%;border-radius:50%;background:radial-gradient(circle,rgba(253,219,7,.28) 0%,rgba(253,219,7,.07) 45%,transparent 70%);opacity:var(--glow,1)}
+.burst{position:absolute;inset:0;border-radius:50%;border:5px solid var(--yellow);opacity:0;pointer-events:none}
 .shine{position:absolute;inset:0;pointer-events:none;opacity:0;background:linear-gradient(100deg,transparent 35%,rgba(255,255,255,.6) 50%,transparent 65%)}
 .gift,.btn{position:relative;overflow:hidden}
 .gauge svg.ring{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
-.ring .track{fill:rgba(28,13,25,.75);stroke:rgba(255,255,255,.1);stroke-width:14}
+.ring .track{fill:rgba(28,13,25,.78);stroke:rgba(255,255,255,.1);stroke-width:14}
 .ring .prog{fill:none;stroke:var(--yellow);stroke-width:14;stroke-linecap:round;stroke-dasharray:540.35;stroke-dashoffset:0}
 .ring .red{fill:none;stroke:var(--red);stroke-width:14;stroke-linecap:round;stroke-dasharray:540.35;stroke-dashoffset:540.35}
 .g-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.g-label{font-size:calc(var(--g,330px)*.08);font-weight:600;color:var(--muted)}
-.g-num{font-family:Alexandria;font-weight:900;font-size:calc(var(--g,330px)*.40);line-height:1;color:var(--yellow);direction:ltr;display:flex;align-items:baseline;margin-top:2px}
+.g-before{font-size:calc(var(--g,240px)*.092);font-weight:600;color:var(--red);display:flex;align-items:center;gap:8px}
+.g-before s{font-family:Alexandria;font-weight:700;direction:ltr;unicode-bidi:isolate;text-decoration-thickness:3px}
+.g-num{font-family:Alexandria;font-weight:900;font-size:calc(var(--g,240px)*.40);line-height:1;color:var(--yellow);direction:ltr;display:flex;align-items:baseline;margin-top:4px}
 .g-num .pct{font-size:.5em;margin-left:.04em}
-.g-tii{font-family:Alexandria;font-weight:700;font-size:calc(var(--g,330px)*.066);color:var(--muted-2);letter-spacing:.5px;margin-top:6px}
-.g-badge{position:absolute;top:5%;right:4%;width:22%;height:22%;border-radius:50%;background:var(--yellow);color:var(--plum-800);display:grid;place-items:center;box-shadow:0 0 0 7px var(--plum-850)}
-.g-badge svg{width:58%;height:58%}
+.g-badge{position:absolute;top:3%;right:2%;width:24%;height:24%;border-radius:50%;background:var(--yellow);color:var(--plum-800);display:grid;place-items:center;box-shadow:0 0 0 6px var(--plum-850)}
+.g-badge svg{width:56%;height:56%}
 
-.services{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:22px;flex:1}
-.services li{display:flex;align-items:center;gap:16px;font-size:var(--svc,33px);font-weight:600;line-height:1.25}
-.services .ck{width:44px;height:44px;flex:none;border-radius:50%;background:var(--yellow);color:var(--plum-800);display:grid;place-items:center}
-.services .ck svg{width:26px;height:26px}
+.chips{list-style:none;margin:var(--c-mt,28px) 0 0;padding:0;display:flex;flex-wrap:nowrap;justify-content:center;gap:10px}
+.chips li{display:flex;align-items:center;gap:8px;white-space:nowrap;font-size:var(--chip,23px);font-weight:600;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13);padding:8px 12px 8px 16px;border-radius:999px}
+.chips .ck{width:28px;height:28px;flex:none;border-radius:50%;background:var(--yellow);color:var(--plum-800);display:grid;place-items:center}
+.chips .ck svg{width:18px;height:18px}
 
 /* gift */
-.gift{position:relative;margin-top:40px;display:flex;align-items:center;gap:26px;background:linear-gradient(135deg,#ffe53a 0%,var(--yellow) 45%,#f2c800 100%);color:var(--plum-800);
+.gift{position:relative;margin-top:var(--gift-mt,30px);display:flex;align-items:center;gap:26px;background:linear-gradient(135deg,#ffe53a 0%,var(--yellow) 45%,#f2c800 100%);color:var(--plum-800);
   border-radius:30px;padding:26px 30px;box-shadow:0 18px 40px rgba(0,0,0,.35)}
 .gift-icon{width:108px;height:108px;flex:none;border-radius:26px;background:var(--plum-700);color:var(--yellow);display:grid;place-items:center;transform:rotate(-6deg)}
 .gift-icon svg{width:62px;height:62px}
@@ -90,25 +93,21 @@ body{width:var(--W);height:var(--H);overflow:hidden;font-family:'Readex Pro',san
 .wa .ic svg{width:28px;height:28px}
 
 /* ---- story 9:16 ---- */
-[data-s=story]{--W:1080px;--H:1920px;--pad-t:240px;--pad-b:240px;--h1:102px;--g:330px;--svc:32px;--h1-mt:34px}
+[data-s=story]{--W:1080px;--H:1920px;--pad-t:240px;--pad-b:240px;--h1:104px;--h2r:.5em;--g:290px;--ml:32px;--chip:24px;--h1-mt:32px;--m-mt:46px;--c-mt:40px;--gift-mt:40px;--mgap:80px}
 [data-s=story] .logo{width:100px;height:100px}
 [data-s=story] .kicker{margin-top:36px}
-[data-s=story] .hero{flex-direction:column;gap:30px;margin-top:34px}
-[data-s=story] .services{display:grid;grid-template-columns:1fr 1fr;gap:20px 24px;width:100%}
-[data-s=story] .services{gap:16px 20px}
-[data-s=story] .services li{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:22px;padding:12px 16px;font-size:29px}
-[data-s=story] .gift{margin-top:32px}
 [data-s=story] .motif{bottom:-60px}
 
 /* ---- square 1:1 ---- */
-[data-s=square]{--W:1080px;--H:1080px;--pad-t:46px;--pad-b:44px;--h1:86px;--g:282px;--svc:30px;--h1-mt:24px}
-[data-s=square] .kicker{margin-top:28px;font-size:24px;padding:8px 18px}
+[data-s=square]{--W:1080px;--H:1080px;--pad-t:46px;--pad-b:44px;--h1:84px;--g:188px;--ml:26px;--h1-mt:20px;--m-mt:22px;--gift-mt:24px;--mgap:90px}
+[data-s=square] .kicker{margin-top:24px;font-size:24px;padding:8px 18px}
 [data-s=square] .kicker svg{width:28px;height:28px}
-[data-s=square] .sub{font-size:29px;margin-top:10px}
-[data-s=square] .hero{margin-top:26px;gap:36px}
-[data-s=square] .services{gap:14px}
-[data-s=square] .services .ck{width:38px;height:38px}
-[data-s=square] .gift{margin-top:30px;padding:18px 24px;gap:20px}
+[data-s=square] .sub{font-size:28px;margin-top:8px}
+[data-s=square] .meter{gap:8px}
+[data-s=square] .chips{--chip:21px;margin-top:20px}
+[data-s=square] .chips li{padding:6px 10px 6px 14px}
+[data-s=square] .chips .ck{width:24px;height:24px}
+[data-s=square] .gift{padding:16px 24px;gap:20px}
 [data-s=square] .gift-icon{width:84px;height:84px;border-radius:22px}
 [data-s=square] .gift-icon svg{width:48px;height:48px}
 [data-s=square] .gift-title{font-size:30px;margin-top:6px}
@@ -139,29 +138,43 @@ body{width:var(--W);height:var(--H);overflow:hidden;font-family:'Readex Pro',san
     <div class="kicker a-kicker"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/></svg>للباحثين والتدريسيين وطلبة الدراسات العليا</div>
 
     <div class="head-wrap" style="position:relative">
-      <h1 class="headline a-headline">نصفّر <span class="hl">نسبة الاستلال</span></h1>
-      <h1 class="headline a-hook" style="position:absolute;inset:0;opacity:0">نسبة الاستلال <span style="color:var(--red)">عالية؟</span></h1>
+      <h1 class="headline a-headline"><span class="l1">تقليل وتصفير</span><span class="l2">نسبة الاستلال والذكاء الاصطناعي</span></h1>
+      <h1 class="headline a-hook" style="position:absolute;top:0;right:0;left:0;opacity:0">نسبة الاستلال<br>والذكاء <span style="color:var(--red)">عالية؟</span></h1>
     </div>
     <p class="sub a-sub">باستخدام برنامج <span class="tii">Turnitin</span> المعتمد في الجامعات</p>
 
-    <section class="hero">
-      <div class="gauge a-gauge">
-        <svg class="ring" viewBox="0 0 200 200"><circle class="track" cx="100" cy="100" r="86"/><circle class="red" cx="100" cy="100" r="86"/><circle class="prog" cx="100" cy="100" r="86"/></svg>
-        <div class="g-inner">
-          <div class="g-label">نسبة الاستلال</div>
-          <div class="g-num"><span class="n" id="gnum">0</span><span class="pct">%</span></div>
-          <div class="g-tii">Turnitin</div>
+    <section class="meters">
+      <div class="meter m-plag">
+        <div class="gauge a-gauge">
+          <svg class="ring" viewBox="0 0 200 200"><circle class="track" cx="100" cy="100" r="86"/><circle class="red" cx="100" cy="100" r="86"/><circle class="prog" cx="100" cy="100" r="86"/></svg>
+          <div class="g-inner">
+            <div class="g-before a-before">قبل <s>47%</s></div>
+            <div class="g-num"><span class="n" data-before="47" data-after="9">9</span><span class="pct">%</span></div>
+          </div>
+          <div class="burst"></div>
+          <div class="g-badge a-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg></div>
         </div>
-        <div class="burst"></div>
-        <div class="g-badge a-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+        <div class="m-label">نسبة الاستلال</div>
       </div>
-      <ul class="services">
-        <li class="a-svc"><span class="ck">%%CHECK%%</span>البحوث العلمية والأكاديمية</li>
-        <li class="a-svc"><span class="ck">%%CHECK%%</span>بحوث الترقية والنشر</li>
-        <li class="a-svc"><span class="ck">%%CHECK%%</span>رسائل الماجستير</li>
-        <li class="a-svc"><span class="ck">%%CHECK%%</span>أطاريح الدكتوراه</li>
-      </ul>
+      <div class="meter m-ai">
+        <div class="gauge a-gauge">
+          <svg class="ring" viewBox="0 0 200 200"><circle class="track" cx="100" cy="100" r="86"/><circle class="red" cx="100" cy="100" r="86"/><circle class="prog" cx="100" cy="100" r="86"/></svg>
+          <div class="g-inner">
+            <div class="g-before a-before">قبل <s>68%</s></div>
+            <div class="g-num"><span class="n" data-before="68" data-after="0">0</span><span class="pct">%</span></div>
+          </div>
+          <div class="burst"></div>
+          <div class="g-badge a-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg></div>
+        </div>
+        <div class="m-label">نسبة الذكاء الاصطناعي</div>
+      </div>
     </section>
+    <ul class="chips">
+      <li class="a-svc"><span class="ck">%%CHECK%%</span>بحوث علمية</li>
+      <li class="a-svc"><span class="ck">%%CHECK%%</span>بحوث ترقية ونشر</li>
+      <li class="a-svc"><span class="ck">%%CHECK%%</span>رسائل ماجستير</li>
+      <li class="a-svc"><span class="ck">%%CHECK%%</span>أطاريح دكتوراه</li>
+    </ul>
 
     <section class="gift a-gift"><i class="shine"></i>
       <div class="gift-icon a-gifticon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"/></svg></div>
