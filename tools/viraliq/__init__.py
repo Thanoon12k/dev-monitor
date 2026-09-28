@@ -236,7 +236,26 @@ def tick():
             if cfg.get("token") and p["status"] == "approved" and p.get("scheduled_at") and datetime.fromisoformat(p["scheduled_at"]) <= now():
                 publish(cfg, p)
                 report["published"] += 1
+        watchdog(cfg, posts)
     return report
+
+
+RUNS = ((8, "الصبح"), (20, "المسا"))  # routine hours (Baghdad); drafts expected within 45 min
+
+
+def watchdog(cfg, posts):
+    """Tell the owner once if a scheduled content run brought no drafts."""
+    n = now()
+    for hour, name in RUNS:
+        start = n.replace(hour=hour, minute=0, second=0, microsecond=0)
+        key = f"{start:%Y-%m-%d}-{hour}"
+        if not cfg.get("token") or n < start + timedelta(minutes=45) or n > start + timedelta(hours=3) \
+                or key in cfg.get("alerted", []):
+            continue
+        if not any(datetime.fromisoformat(p["created"]) >= start for p in posts):
+            say(cfg, f"⚠️ مسودات {name} ({hour}:00) ما وصلت لحد هسه. الوكيل المجدول ما اشتغل أو فشل؛ "
+                     "افتح Claude وكله يشغّل دفعة اليوم.")
+        cfg["alerted"] = (cfg.get("alerted", []) + [key])[-10:]
 
 
 # ---------- telegram webhook ----------

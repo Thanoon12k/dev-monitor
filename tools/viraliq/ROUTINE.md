@@ -53,6 +53,9 @@ Write the drafts to `/tmp/drafts.json`:
   "poster": {"badge": "اليوم 1 من 100", "title": "…", "hook": "…", "points": ["…", "…", "…"]}}]
 ```
 then `python tools/viraliq/submit.py send /tmp/drafts.json`. Check the output shows
-`"sent": N`; if the hub or Telegram fails, say so plainly in your final message.
+`"sent": N`. If anything fails at any step (clone, research, poster, upload), do not stop
+silently: run `python tools/viraliq/submit.py notify "⚠️ Viraliq: <what failed and the error>"`
+so the owner hears about it on Telegram, and say so plainly in your final message.
+Work autonomously: nobody is watching this session, never stop to ask a question.
 Look at one rendered poster (render it locally with `poster.py`) before sending if you
 changed its layout inputs a lot.

@@ -3,6 +3,7 @@
     python tools/viraliq/submit.py history          # recent titles + next course day
     python tools/viraliq/submit.py send drafts.json  # render posters, upload, notify
     python tools/viraliq/submit.py connect           # store $viraliq_tele_bot_token on the hub + set webhook
+    python tools/viraliq/submit.py notify "text"     # message the owner on Telegram (e.g. to report a failure)
 
 drafts.json: [{"kind", "title", "text", "hashtags": [...], "suggested_at": "YYYY-MM-DD HH:MM" (Baghdad),
                "sources": [...], "poster": {"badge", "title", "hook", "points": [...]}}]
@@ -75,5 +76,13 @@ def connect():
     print("tick:", requests.get(SITE + "/viraliq/tick", timeout=120).text)
 
 
+def notify(text):
+    cfg = get_json("config.json", {})
+    r = requests.post(f"https://api.telegram.org/bot{cfg['token']}/sendMessage", timeout=30,
+                      data={"chat_id": cfg.get("chat_id", "647908098"), "text": text[:4000]}).json()
+    print("notified" if r.get("ok") else r)
+
+
 if __name__ == "__main__":
-    {"history": history, "send": lambda: send(sys.argv[2]), "connect": connect}[sys.argv[1]]()
+    {"history": history, "send": lambda: send(sys.argv[2]), "connect": connect,
+     "notify": lambda: notify(" ".join(sys.argv[2:]))}[sys.argv[1]]()
