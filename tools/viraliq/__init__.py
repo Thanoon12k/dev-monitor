@@ -131,7 +131,8 @@ def time_keyboard(pid):
 def status_line(p):
     return {
         "pending": f"⏳ بانتظار موافقتك · الوقت المقترح: {fmt(p['suggested_at'])}",
-        "approved": f"✅ مجدول للنشر: {fmt(p.get('scheduled_at'))}",
+        "approved": f"✅ مجدول للنشر: {fmt(p.get('scheduled_at'))}"
+                    + (" · 📅 مجدول داخل فيسبوك" if p.get("fb_sched") else ""),
         "published": f"🚀 نُشر {fmt(p.get('published_at'))}",
         "cancelled": "❌ ملغي",
     }[p["status"]]
@@ -178,6 +179,43 @@ def fb_target(cfg):
     return (GOLDEN_PAGE, tok) if tok and not cfg.get("fb_off") else (None, None)
 
 
+def fb_schedule(cfg, p):
+    """Create the post inside Facebook as a scheduled (unpublished) photo post.
+
+    Facebook accepts scheduled times from 10 minutes to 30 days ahead; outside that
+    window, or on failure, the hub publishes it itself when the time comes.
+    """
+    page, token = fb_target(cfg)
+    t = datetime.fromisoformat(p["scheduled_at"])
+    if not page or p.get("fb_sched") or p.get("fb_err") or not now() + timedelta(minutes=11) <= t <= now() + timedelta(days=29):
+        return
+    try:
+        with open(os.path.join(IMG, p["image"]), "rb") as f:
+            r = requests.post(GRAPH + page + "/photos", files={"source": f}, timeout=60, data={
+                "caption": full_text(p), "published": "false", "scheduled_publish_time": int(t.timestamp()),
+                "access_token": token}).json()
+    except (requests.RequestException, ValueError) as e:
+        r = {"error": {"message": str(e)}}
+    if r.get("id"):
+        p["fb_sched"] = r.get("post_id") or r["id"]
+    else:
+        p["fb_err"] = r.get("error", {}).get("message", "خطأ غير معروف")
+        say(cfg, f"⚠️ ما كدرت أجدول #{p['id']} داخل فيسبوك ({p['fb_err']}). راح ينتشر من التطبيق بوقته.")
+    refresh(cfg, p)
+
+
+def fb_unschedule(cfg, p):
+    """Drop the Facebook-side scheduled post (before a time change, an edit or a cancel)."""
+    pid = p.pop("fb_sched", None)
+    p.pop("fb_err", None)
+    page, token = fb_target(cfg)
+    if pid and token:
+        try:
+            requests.delete(GRAPH + pid, params={"access_token": token}, timeout=30)
+        except requests.RequestException:
+            pass
+
+
 def publish(cfg, p):
     text, img, done = full_text(p), os.path.join(IMG, p["image"]), []
     if cfg.get("channel"):
@@ -189,7 +227,9 @@ def publish(cfg, p):
                 r = r if not r.get("ok") else tg(cfg, "sendMessage", chat_id=cfg["channel"], text=text[:4096])
         done.append(f"تيليجرام {cfg['channel']}: " + ("✅" if r.get("ok") else f"❌ {r.get('description')}"))
     page, token = fb_target(cfg)
-    if page:
+    if p.get("fb_sched"):
+        done.append("فيسبوك: ✅ (انتشر من جدولة فيسبوك)")
+    elif page:
         try:
             with open(img, "rb") as f:
                 r = requests.post(GRAPH + page + "/photos", files={"source": f}, timeout=60,
@@ -233,9 +273,12 @@ def tick():
         for p in posts:
             if p["status"] == "pending" and not p.get("tg_msg") and cfg.get("token"):
                 report["sent"] += send_preview(cfg, p)
-            if cfg.get("token") and p["status"] == "approved" and p.get("scheduled_at") and datetime.fromisoformat(p["scheduled_at"]) <= now():
-                publish(cfg, p)
-                report["published"] += 1
+            if cfg.get("token") and p["status"] == "approved" and p.get("scheduled_at"):
+                if datetime.fromisoformat(p["scheduled_at"]) <= now():
+                    publish(cfg, p)
+                    report["published"] += 1
+                else:
+                    fb_schedule(cfg, p)
         watchdog(cfg, posts)
     return report
 
@@ -270,8 +313,9 @@ def on_callback(cfg, posts, cq):
     if action == "ok":
         t = datetime.fromisoformat(p.get("scheduled_at") or p["suggested_at"])
         p["status"], p["scheduled_at"] = "approved", max(t, now() + timedelta(minutes=1)).isoformat()
-        refresh(cfg, p)
+        refresh(cfg, p)  # the tick after this webhook schedules it inside Facebook
     elif action == "no":
+        fb_unschedule(cfg, p)
         p["status"] = "cancelled"
         refresh(cfg, p)
     elif action == "edit":
@@ -292,6 +336,7 @@ def on_callback(cfg, posts, cq):
 
 
 def set_time(cfg, p, t):
+    fb_unschedule(cfg, p)
     p["scheduled_at"], p["status"] = t.isoformat(), "approved"
     refresh(cfg, p)
     say(cfg, f"✅ #{p['id']} راح ينتشر {fmt(p['scheduled_at'])}")
@@ -340,6 +385,7 @@ def on_message(cfg, posts, msg):
                     out.write(data)
         if text:  # the new text is the whole post, hashtags included
             p["text"], p["hashtags"] = text, []
+        fb_unschedule(cfg, p)  # rescheduled with the new content on the next tick
         if p.get("tg_msg"):
             tg(cfg, "editMessageReplyMarkup", chat_id=cfg.get("chat_id", DEFAULT_CHAT), message_id=p["tg_msg"],
                reply_markup={"inline_keyboard": []})
