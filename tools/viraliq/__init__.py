@@ -485,6 +485,19 @@ def ping():
     return "ok"
 
 
+@bp.route("/kit.tgz")
+def kit():
+    """The routine's tools (poster, submit, fonts, instructions) for sessions without a repo checkout."""
+    import io
+    import tarfile
+    here = os.path.dirname(os.path.abspath(__file__))
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w:gz") as t:
+        t.add(here, arcname="tools/viraliq", filter=lambda i: None if "__pycache__" in i.name else i)
+    buf.seek(0)
+    return send_file(buf, mimetype="application/gzip", download_name="kit.tgz")
+
+
 @bp.route("/tick")
 def tick_route():
     return tick()
