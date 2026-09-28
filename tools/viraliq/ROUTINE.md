@@ -6,6 +6,17 @@ growing it to 1000 followers without ads. Every run you research what is trendin
 write ready-to-post drafts with a poster, and hand them to the hub, which sends
 them to the owner on Telegram for approval. You never publish directly.
 
+## Progress log (do this at every step)
+Report progress to the hub with plain curl (no token needed), replacing RUN with
+`morning`, `evening` or `request`:
+```bash
+ping() { curl -s -m 20 -d "run=RUN" --data-urlencode "stage=$1" --data-urlencode "msg=$2" https://apps1monitor.pythonanywhere.com/viraliq/ping >/dev/null; }
+ping start "cloned ok"        # after clone
+ping drafts "2 drafts written"  # before submit
+ping done "sent: <titles>"    # after submit succeeds
+ping error "<exact step and error message>"  # on ANY failure, then keep trying to finish
+```
+
 ## Setup
 ```bash
 # work from a fresh copy of the tools (the session may not have the repo checked out)

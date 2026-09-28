@@ -462,6 +462,29 @@ def webhook(key):
     return "ok"
 
 
+LOG = os.path.join(DIR, "log.json")
+
+
+@bp.route("/ping", methods=["POST"])
+def ping():
+    """Unauthenticated progress log for the content routine (no secrets needed to report).
+
+    Keeps the last 100 lines; a stage of "error" is also forwarded to Telegram, at most 8 a day.
+    """
+    f = request.form
+    line = {"at": now().isoformat(timespec="seconds"), "run": f.get("run", "")[:40],
+            "stage": f.get("stage", "")[:40], "msg": f.get("msg", "")[:500]}
+    with state() as (cfg, _):
+        log = _load(LOG, [])[-99:] + [line]
+        _save(LOG, log)
+        day = f"{now():%Y-%m-%d}"
+        sent = cfg.get("err_alerts", {}).get(day, 0)
+        if line["stage"] == "error" and sent < 8:
+            cfg["err_alerts"] = {day: sent + 1}
+            say(cfg, f"⚠️ الوكيل ({line['run']}) فشل: {line['msg']}")
+    return "ok"
+
+
 @bp.route("/tick")
 def tick_route():
     return tick()
@@ -519,6 +542,7 @@ def dashboard():
     rep = tick()
     cfg, posts = _load(CFG, {}), _load(POSTS, [])
     return render_template("viraliq/dashboard.html", cfg=cfg, posts=list(reversed(posts))[:60],
+                           log=list(reversed(_load(LOG, [])))[:20],
                            rep=rep, fmt=fmt, status_line=status_line, default_chat=DEFAULT_CHAT,
                            fb=fb_target(cfg)[0])
 

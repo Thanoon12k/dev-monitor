@@ -31,4 +31,7 @@
 <td><b>#{{ p.id }} {{ p.title }}</b><div class="mute" style="white-space:pre-line">{{ p.text[:220] }}…</div></td>
 <td class="mute">{{ status_line(p) }}{% for r in p.result or [] %}<div>{{ r }}</div>{% endfor %}</td></tr>
 {% else %}<tr><td class="mute" colspan="3">لسه ماكو منشورات. أول دفعة توصل الساعة 8.</td></tr>{% endfor %}</table></div></div>
+<div class="card"><h3>سجل الوكيل</h3><div class="scroll"><table>
+{% for l in log %}<tr><td class="mute" style="white-space:nowrap">{{ l.at[5:16].replace('T',' ') }}</td><td>{{ l.run }}</td><td><b>{{ l.stage }}</b></td><td class="mute">{{ l.msg }}</td></tr>
+{% else %}<tr><td class="mute">لسه ماكو تشغيل.</td></tr>{% endfor %}</table></div></div>
 {% endblock %}
