@@ -269,9 +269,14 @@ def tick():
                           "text": d.get("text", ""), "hashtags": d.get("hashtags", []),
                           "sources": d.get("sources", []), "image": f"{pid}.png", "status": "pending",
                           "suggested_at": sug.isoformat(), "created": now().isoformat(), "tg_msg": None})
+            if d.get("request") and d["request"] in cfg.get("auto_reqs", []):
+                cfg["auto_reqs"].remove(d["request"])
+                posts[-1].update(status="approved", scheduled_at=now().isoformat(), auto=True)
             report["ingested"] += 1
         for p in posts:
-            if p["status"] == "pending" and not p.get("tg_msg") and cfg.get("token"):
+            if p["status"] in ("pending", "approved") and p.get("auto") and not p.get("tg_msg") and cfg.get("token"):
+                report["sent"] += send_preview(cfg, p)
+            elif p["status"] == "pending" and not p.get("tg_msg") and cfg.get("token"):
                 report["sent"] += send_preview(cfg, p)
             if cfg.get("token") and p["status"] == "approved" and p.get("scheduled_at"):
                 if datetime.fromisoformat(p["scheduled_at"]) <= now():
@@ -357,13 +362,16 @@ def on_message(cfg, posts, msg):
                      "لازم تضيف البوت أدمن بالقناة حتى يكدر ينشر.")
         elif cmd == "/post":
             request_post(cfg, arg)
+        elif cmd == "/postnow":
+            request_post(cfg, arg, auto=True)
         elif cmd == "/queue":
             q = [p for p in posts if p["status"] in ("pending", "approved")]
             say(cfg, "\n".join(f"#{p['id']} {p['title'][:50]}\n   {status_line(p)}" for p in q) or "ماكو منشورات بالانتظار.")
         else:
             say(cfg, "أهلاً 👋 أني بوت رائج (Viraliq).\nكل يوم الساعة 8 الصبح و8 بالليل أبحث عن الترند وأرسلك مسودات "
                      "منشورات مع بوستر، وانت توافق أو تعدّل أو تغيّر الوقت أو تلغي.\n\n"
-                     "✍️ تريد منشور عن موضوع معين؟ اكتبه برسالة (أو /post الموضوع) وأبحث وأكمله مع بوستر.\n\n"
+                     "✍️ تريد منشور عن موضوع معين؟ اكتبه برسالة (أو /post الموضوع) وأبحث وأكمله مع بوستر.\n"
+                     "🚀 /postnow الموضوع: نفسه بس ينتشر مباشرة من يجهز بدون موافقة.\n\n"
                      "/queue المنشورات المنتظرة\n/channel @اسم_القناة لتحديد قناة النشر التلقائي\n"
                      f"معرّف المحادثة: {msg['chat']['id']}")
         return
@@ -400,32 +408,41 @@ FIRE_BETA = "experimental-cc-routine-2026-04-01"
 MAX_REQUESTS_PER_DAY = 6
 
 
-def request_post(cfg, topic):
-    """Start the on-demand Claude routine that researches `topic` and sends back a draft."""
+def request_post(cfg, topic, auto=False):
+    """Start the on-demand Claude routine that researches `topic` and sends back a draft.
+
+    With auto=True the finished post skips approval and is published as soon as it arrives.
+    Returns the message shown to the owner (also sent on Telegram).
+    """
     topic = (topic or "").strip()
     if len(topic) < 3:
-        say(cfg, "اكتب الموضوع اللي تريد عنه منشور، مثلاً:\n/post أفضل 5 أدوات ذكاء اصطناعي مجانية للطلاب")
-        return
+        return say_back(cfg, "اكتب الموضوع اللي تريد عنه منشور، مثلاً:\n/post أفضل 5 أدوات ذكاء اصطناعي مجانية للطلاب")
     if not (cfg.get("fire_url") and cfg.get("fire_token")):
-        say(cfg, "⚙️ ميزة الطلب تحتاج رابط وتوكن الـ API للروتين «Viraliq · طلب منشور». حطهم بلوحة /viraliq/ مرة وحدة.")
-        return
+        return say_back(cfg, "⚙️ ميزة الطلب تحتاج رابط وتوكن الـ API للروتين «Viraliq · طلب منشور». حطهم بلوحة /viraliq/ مرة وحدة.")
     day = f"{now():%Y-%m-%d}"
     used = cfg.get("requests", {}).get(day, 0)
     if used >= MAX_REQUESTS_PER_DAY:
-        say(cfg, f"وصلت حد اليوم ({MAX_REQUESTS_PER_DAY} طلبات). باجر نكمل 🙏")
-        return
+        return say_back(cfg, f"وصلت حد اليوم ({MAX_REQUESTS_PER_DAY} طلبات). باجر نكمل 🙏")
+    rid = secrets.token_hex(3)
     try:
-        r = requests.post(cfg["fire_url"], timeout=30, json={"text": topic[:1500]}, headers={
+        r = requests.post(cfg["fire_url"], timeout=30, json={"text": f"[req:{rid}] {topic[:1500]}"}, headers={
             "Authorization": "Bearer " + cfg["fire_token"], "anthropic-beta": FIRE_BETA,
             "anthropic-version": "2023-06-01"})
         ok, err = r.ok, r.text[:300]
     except requests.RequestException as e:
         ok, err = False, str(e)
-    if ok:
-        cfg["requests"] = {day: used + 1}
-        say(cfg, f"🔎 تمام، دا أبحث عن: «{topic[:200]}»\nالمسودة مع البوستر توصلك هنا خلال 5 إلى 15 دقيقة.")
-    else:
-        say(cfg, f"⚠️ ما كدرت أشغّل الوكيل: {err}")
+    if not ok:
+        return say_back(cfg, f"⚠️ ما كدرت أشغّل الوكيل: {err}")
+    cfg["requests"] = {day: used + 1}
+    if auto:
+        cfg["auto_reqs"] = (cfg.get("auto_reqs", []) + [rid])[-20:]
+        return say_back(cfg, f"🔎 دا أبحث عن: «{topic[:200]}»\n🚀 من يجهز خلال 5 إلى 15 دقيقة ينتشر مباشرة بدون موافقة، ويوصلك هنا.")
+    return say_back(cfg, f"🔎 تمام، دا أبحث عن: «{topic[:200]}»\nالمسودة مع البوستر توصلك هنا خلال 5 إلى 15 دقيقة.")
+
+
+def say_back(cfg, text):
+    say(cfg, text)
+    return text
 
 
 @bp.route("/webhook/<key>", methods=["POST"])
@@ -504,6 +521,16 @@ def dashboard():
     return render_template("viraliq/dashboard.html", cfg=cfg, posts=list(reversed(posts))[:60],
                            rep=rep, fmt=fmt, status_line=status_line, default_chat=DEFAULT_CHAT,
                            fb=fb_target(cfg)[0])
+
+
+@bp.route("/request", methods=["POST"])
+@login_required
+def request_from_site():
+    check_csrf()
+    with state() as (cfg, _):
+        msg = request_post(cfg, request.form.get("topic", ""), auto=bool(request.form.get("auto")))
+    flash(msg)
+    return redirect(url_for("viraliq.dashboard"))
 
 
 @bp.route("/img/<int:pid>.png")

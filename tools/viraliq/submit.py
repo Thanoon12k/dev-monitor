@@ -56,7 +56,7 @@ def send(path):
             render(spec, tmp.name)
             name = f"inbox/{stamp}-{i}"
             upload(name + ".png", open(tmp.name, "rb").read())  # image first: the hub waits for it
-        meta = {k: d.get(k) for k in ("kind", "title", "text", "hashtags", "suggested_at", "sources")}
+        meta = {k: d.get(k) for k in ("kind", "title", "text", "hashtags", "suggested_at", "sources", "request")}
         upload(name + ".json", json.dumps(meta, ensure_ascii=False).encode())
         print("uploaded", name, d["title"])
     print("tick:", requests.get(SITE + "/viraliq/tick", timeout=120).text)

@@ -5,6 +5,12 @@
 <div class="grid">
 {% for k, n in [('pending','بانتظار موافقتك'),('approved','مجدولة'),('published','منشورة'),('cancelled','ملغاة')] %}
 <div class="card stat"><span>{{ n }}</span><b>{{ posts|selectattr('status','equalto',k)|list|length }}</b></div>{% endfor %}</div>
+<div class="card"><h3>✍️ اطلب منشور جديد</h3><form method="post" action="{{ url_for('viraliq.request_from_site') }}"><input type="hidden" name="csrf" value="{{ csrf }}">
+<label>الموضوع (الوكيل يبحث، يتأكد من المعلومات، يكتب المنشور ويصمم البوستر)</label>
+<textarea name="topic" rows="2" required placeholder="مثلاً: أفضل 5 أدوات ذكاء اصطناعي مجانية لطلاب الجامعة"></textarea>
+<div class="row" style="justify-content:space-between;margin-top:10px">
+<label style="display:flex;gap:8px;align-items:center;margin:0"><input type="checkbox" name="auto" value="1" style="width:auto"> 🚀 انشره مباشرة من يجهز (بدون موافقة)</label>
+<button>ابحث واكتب المنشور</button></div></form></div>
 <div class="card"><h3>ربط البوت</h3><form method="post"><input type="hidden" name="csrf" value="{{ csrf }}">
 <label>توكن بوت تيليجرام (من BotFather)</label>
 <div class="row"><input name="token" type="password" placeholder="123456:ABC..." style="flex:1">
