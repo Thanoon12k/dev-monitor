@@ -355,18 +355,21 @@ def on_message(cfg, posts, msg):
             cfg["channel"] = arg.strip()
             say(cfg, f"📢 قناة النشر: {cfg['channel'] or 'بدون (تستلم المنشور بيدك)'}\n"
                      "لازم تضيف البوت أدمن بالقناة حتى يكدر ينشر.")
+        elif cmd == "/post":
+            request_post(cfg, arg)
         elif cmd == "/queue":
             q = [p for p in posts if p["status"] in ("pending", "approved")]
             say(cfg, "\n".join(f"#{p['id']} {p['title'][:50]}\n   {status_line(p)}" for p in q) or "ماكو منشورات بالانتظار.")
         else:
             say(cfg, "أهلاً 👋 أني بوت رائج (Viraliq).\nكل يوم الساعة 8 الصبح و8 بالليل أبحث عن الترند وأرسلك مسودات "
                      "منشورات مع بوستر، وانت توافق أو تعدّل أو تغيّر الوقت أو تلغي.\n\n"
+                     "✍️ تريد منشور عن موضوع معين؟ اكتبه برسالة (أو /post الموضوع) وأبحث وأكمله مع بوستر.\n\n"
                      "/queue المنشورات المنتظرة\n/channel @اسم_القناة لتحديد قناة النشر التلقائي\n"
                      f"معرّف المحادثة: {msg['chat']['id']}")
         return
     p = find(posts, wait.get("id", 0))
-    if not p:
-        say(cfg, "استلمت 👍 إذا تريد تعدّل منشور اضغط ✏️ تعديل تحته.")
+    if not p:  # free text outside an edit = a request for a new post on that topic
+        request_post(cfg, text)
         return
     if wait["kind"] == "time":
         t = parse_time(text)
@@ -391,6 +394,38 @@ def on_message(cfg, posts, msg):
                reply_markup={"inline_keyboard": []})
         p["tg_msg"] = None
         send_preview(cfg, p)
+
+
+FIRE_BETA = "experimental-cc-routine-2026-04-01"
+MAX_REQUESTS_PER_DAY = 6
+
+
+def request_post(cfg, topic):
+    """Start the on-demand Claude routine that researches `topic` and sends back a draft."""
+    topic = (topic or "").strip()
+    if len(topic) < 3:
+        say(cfg, "اكتب الموضوع اللي تريد عنه منشور، مثلاً:\n/post أفضل 5 أدوات ذكاء اصطناعي مجانية للطلاب")
+        return
+    if not (cfg.get("fire_url") and cfg.get("fire_token")):
+        say(cfg, "⚙️ ميزة الطلب تحتاج رابط وتوكن الـ API للروتين «Viraliq · طلب منشور». حطهم بلوحة /viraliq/ مرة وحدة.")
+        return
+    day = f"{now():%Y-%m-%d}"
+    used = cfg.get("requests", {}).get(day, 0)
+    if used >= MAX_REQUESTS_PER_DAY:
+        say(cfg, f"وصلت حد اليوم ({MAX_REQUESTS_PER_DAY} طلبات). باجر نكمل 🙏")
+        return
+    try:
+        r = requests.post(cfg["fire_url"], timeout=30, json={"text": topic[:1500]}, headers={
+            "Authorization": "Bearer " + cfg["fire_token"], "anthropic-beta": FIRE_BETA,
+            "anthropic-version": "2023-06-01"})
+        ok, err = r.ok, r.text[:300]
+    except requests.RequestException as e:
+        ok, err = False, str(e)
+    if ok:
+        cfg["requests"] = {day: used + 1}
+        say(cfg, f"🔎 تمام، دا أبحث عن: «{topic[:200]}»\nالمسودة مع البوستر توصلك هنا خلال 5 إلى 15 دقيقة.")
+    else:
+        say(cfg, f"⚠️ ما كدرت أشغّل الوكيل: {err}")
 
 
 @bp.route("/webhook/<key>", methods=["POST"])
@@ -456,8 +491,12 @@ def dashboard():
                 cfg["chat_id"] = f.get("chat_id", "").strip() or DEFAULT_CHAT
                 cfg["channel"] = f.get("channel", "").strip()
                 cfg["fb_page"] = f.get("fb_page", "").strip()
+                cfg["fb_off"] = bool(f.get("fb_off"))
                 if f.get("fb_token"):
                     cfg["fb_token"] = f["fb_token"].strip()
+                cfg["fire_url"] = f.get("fire_url", "").strip()
+                if f.get("fire_token"):
+                    cfg["fire_token"] = f["fire_token"].strip()
             flash("انحفظت الإعدادات")
         return redirect(url_for("viraliq.dashboard"))
     rep = tick()
