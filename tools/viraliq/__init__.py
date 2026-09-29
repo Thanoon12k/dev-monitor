@@ -485,6 +485,55 @@ def ping():
     return "ok"
 
 
+def api_ok():
+    key = _load(CFG, {}).get("api_key")
+    return bool(key) and secrets.compare_digest(request.headers.get("X-Key", ""), key)
+
+
+@bp.route("/api/drafts", methods=["POST"])
+def api_drafts():
+    """Drafts straight from the routine as JSON (same shape as submit.py's drafts.json).
+
+    The hub renders each poster itself, so the routine needs no code, only one HTTP call.
+    """
+    if not api_ok():
+        abort(403)
+    from .poster import render
+    drafts = request.get_json(silent=True)
+    if isinstance(drafts, dict):
+        drafts = [drafts]
+    if not isinstance(drafts, list) or not drafts:
+        return {"ok": False, "error": "body must be a JSON list of drafts"}, 400
+    stamp, names = now().strftime("%Y%m%d%H%M%S"), []
+    for i, d in enumerate(drafts[:5]):
+        if not d.get("title") or not d.get("text"):
+            return {"ok": False, "error": f"draft {i}: title and text are required"}, 400
+        spec = dict(d.get("poster") or {}, kind=d.get("kind", "trend"))
+        spec.setdefault("title", d["title"])
+        base = os.path.join(INBOX, f"{stamp}-api{i}")
+        render(spec, base + ".png")
+        meta = {k: d.get(k) for k in ("kind", "title", "text", "hashtags", "suggested_at", "sources", "request")}
+        _save(base + ".json", meta)
+        names.append(d["title"])
+    return {"ok": True, "queued": names, "tick": tick()}
+
+
+@bp.route("/api/history")
+def api_history():
+    if not api_ok():
+        abort(403)
+    posts = _load(POSTS, [])
+    course = sum(1 for p in posts if p.get("kind") == "course" and p.get("status") != "cancelled")
+    return {"next_course_day": course + 1, "now": now().strftime("%Y-%m-%d %H:%M"),
+            "recent": [f"[{p.get('kind')}] {p['created'][:10]} {p['title']}" for p in posts[-40:]]}
+
+
+@bp.route("/routine.md")
+def routine_md():
+    here = os.path.dirname(os.path.abspath(__file__))
+    return send_file(os.path.join(here, "ROUTINE.md"), mimetype="text/plain; charset=utf-8")
+
+
 @bp.route("/kit.tgz")
 def kit():
     """The routine's tools (poster, submit, fonts, instructions) for sessions without a repo checkout."""
