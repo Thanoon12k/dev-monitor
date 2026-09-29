@@ -145,12 +145,15 @@ def send_preview(cfg, p):
         r = tg(cfg, "sendPhoto", files={"photo": f}, chat_id=chat,
                caption=f"🆕 منشور #{p['id']} · {p.get('kind', '')}\n{p['title']}")
     if not r.get("ok"):
+        p["tg_err"] = f"sendPhoto: {r.get('description')}"
         return False
     src = "\n".join(f"🔗 {u}" for u in p.get("sources", [])[:3])
     body = f"{full_text(p)}\n\n━━━━━━━━\n{status_line(p)}" + (f"\n\nالمصادر:\n{src}" if src else "")
     r2 = tg(cfg, "sendMessage", chat_id=chat, text=body[:4096], reply_markup=keyboard(p["id"]),
             disable_web_page_preview=True)
     p["tg_msg"] = r2.get("result", {}).get("message_id")
+    if not r2.get("ok"):
+        p["tg_err"] = f"sendMessage: {r2.get('description')}"
     return r2.get("ok", False)
 
 
