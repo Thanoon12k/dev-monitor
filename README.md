@@ -8,6 +8,7 @@ Flask site on PythonAnywhere (apps1monitor.pythonanywhere.com) holding several a
 | `/goldencode/` | Golden Code ad manager: campaigns, orders, WhatsApp |
 | `/goldencode/order?c=<id>` | Public order form to link from ads |
 | `/viraliq/` | رائج · Viraliq: daily trend posts approved from Telegram (see `tools/viraliq/ROUTINE.md`) |
+| `/course/` | جلسات دورة تطبيق الموبايل: 8 sessions, checklist per session |
 | `/linkedin/` | Legacy LinkedIn Autopost app, mounted unchanged from `/home/apps1monitor/linkedin` |
 
 Add a tool: create `tools/<name>/__init__.py` with a Blueprint, register it in `app.py`, add it to `TOOLS`.
