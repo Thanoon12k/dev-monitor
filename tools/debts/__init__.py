@@ -7,15 +7,20 @@ as one closed account; any overpayment carries into the new account as credit.
 import json
 import os
 import secrets
+import time
+from functools import wraps
 from datetime import datetime, timedelta, timezone
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, flash, redirect, render_template, request, session, url_for
+from werkzeug.security import check_password_hash, generate_password_hash
 
 bp = Blueprint("debts", __name__, template_folder="../../templates")
 
 STATE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "debts.json")
 IRAQ = timezone(timedelta(hours=3))
 DEFAULT_SHOPS = ["دكان أحمد أنس", "دكان ابن هذال", "دكان عمار (مخضر)", "مول حبش"]
+UNLOCK_SECONDS = 3600      # the PIN is asked again after an hour
+MAX_TRIES, LOCK_SECONDS = 5, 15 * 60
 DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹", "01234567890123456789")
 
 
@@ -93,11 +98,88 @@ def _now():
 
 
 def _admin():
-    from app import check_csrf, login_required
-    return check_csrf, login_required
+    from app import check_csrf
+    return check_csrf
 
 
-check_csrf, login_required = _admin()
+check_csrf = _admin()
+
+
+def pin_required(f):
+    """The book opens with its own PIN (no hub password needed once the PIN is set)."""
+    @wraps(f)
+    def w(*a, **k):
+        if session.get("debts_until", 0) < time.time():
+            session.pop("debts_until", None)
+            return redirect(url_for("debts.lock"))
+        session["debts_until"] = time.time() + UNLOCK_SECONDS
+        return f(*a, **k)
+    return w
+
+
+def valid_pin(p):
+    return len(p) == 6 and p.isdigit()
+
+
+@bp.route("/lock", methods=["GET", "POST"])
+def lock():
+    s = load()
+    setup = not s.get("pin")
+    if setup and not session.get("admin"):
+        # First-time setup needs the hub admin password, so nobody else can claim the PIN.
+        return redirect(url_for("login", next=url_for("debts.lock")))
+    wait = int(s.get("locked_until", 0) - time.time())
+    if request.method == "POST":
+        check_csrf()
+        pin = request.form.get("pin", "").translate(DIGITS).strip()
+        if setup:
+            if not valid_pin(pin) or pin != request.form.get("pin2", "").translate(DIGITS).strip():
+                flash("الرمز لازم 6 أرقام، ونفس الرمز بالخانتين")
+            else:
+                s["pin"] = generate_password_hash(pin)
+                save(s)
+                session["debts_until"] = time.time() + UNLOCK_SECONDS
+                return redirect(url_for("debts.dashboard"))
+        elif wait > 0:
+            pass
+        elif check_password_hash(s["pin"], pin):
+            s["fails"], s["locked_until"] = 0, 0
+            save(s)
+            session["debts_until"] = time.time() + UNLOCK_SECONDS
+            return redirect(url_for("debts.dashboard"))
+        else:
+            s["fails"] = s.get("fails", 0) + 1
+            if s["fails"] >= MAX_TRIES:
+                s["fails"], s["locked_until"] = 0, time.time() + LOCK_SECONDS
+                wait = LOCK_SECONDS
+            else:
+                flash(f"الرمز غلط (باقي {MAX_TRIES - s['fails']} محاولات)")
+            save(s)
+    return render_template("debts/lock.html", setup=setup, wait=max(wait, 0))
+
+
+@bp.route("/logout", methods=["POST"])
+def logout():
+    check_csrf()
+    session.pop("debts_until", None)
+    return redirect(url_for("debts.lock"))
+
+
+@bp.route("/pin", methods=["POST"])
+@pin_required
+def change_pin():
+    check_csrf()
+    s = load()
+    new = request.form.get("new", "").translate(DIGITS).strip()
+    if not check_password_hash(s["pin"], request.form.get("old", "").translate(DIGITS).strip()):
+        flash("الرمز الحالي غلط")
+    elif not valid_pin(new):
+        flash("الرمز الجديد لازم 6 أرقام")
+    else:
+        s["pin"] = generate_password_hash(new)
+        save(s)
+        flash("✔ تغيّر الرمز")
+    return redirect(url_for("debts.dashboard"))
 
 
 @bp.app_template_filter("iqd")
@@ -106,7 +188,7 @@ def iqd(n):
 
 
 @bp.route("/")
-@login_required
+@pin_required
 def dashboard():
     s = load()
     shops = []
@@ -121,7 +203,7 @@ def dashboard():
 
 
 @bp.route("/add", methods=["POST"])
-@login_required
+@pin_required
 def add():
     check_csrf()
     s = load()
@@ -142,7 +224,7 @@ def add():
 
 
 @bp.route("/delete", methods=["POST"])
-@login_required
+@pin_required
 def delete():
     check_csrf()
     s = load()
@@ -152,7 +234,7 @@ def delete():
 
 
 @bp.route("/shop", methods=["POST"])
-@login_required
+@pin_required
 def shop():
     check_csrf()
     s = load()
