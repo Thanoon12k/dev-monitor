@@ -6,25 +6,17 @@ growing it to 1000 followers without ads. Every run you research what is trendin
 write ready-to-post drafts with a poster, and hand them to the hub, which sends
 them to the owner on Telegram for approval. You never publish directly.
 
-## Progress log (do this at every step)
-Report progress to the hub with plain curl (no token needed), replacing RUN with
-`morning`, `evening` or `request`:
+## How to talk to the hub (plain curl only, no code to download or run)
+`KEY` is the hub key given in your prompt; `RUN` is `morning`, `evening` or `request`.
 ```bash
-ping() { curl -s -m 20 -d "run=RUN" --data-urlencode "stage=$1" --data-urlencode "msg=$2" https://apps1monitor.pythonanywhere.com/viraliq/ping >/dev/null; }
-ping start "cloned ok"        # after clone
-ping drafts "2 drafts written"  # before submit
-ping done "sent: <titles>"    # after submit succeeds
-ping error "<exact step and error message>"  # on ANY failure, then keep trying to finish
+H=https://apps1monitor.pythonanywhere.com/viraliq
+ping() { curl -s -m 20 -d "run=RUN" --data-urlencode "stage=$1" --data-urlencode "msg=$2" $H/ping >/dev/null; }
+curl -s -m 30 -H "X-Key: KEY" $H/api/history          # recent titles + next course day
+curl -s -m 180 -H "X-Key: KEY" -H "Content-Type: application/json" \
+     --data-binary @/tmp/drafts.json $H/api/drafts     # hub renders posters and sends to Telegram
 ```
-
-## Setup
-```bash
-# work from a fresh copy of the tools (the session may not have the repo checked out)
-rm -rf /tmp/vq && mkdir -p /tmp/vq && cd /tmp/vq
-curl -sf -m 60 https://apps1monitor.pythonanywhere.com/viraliq/kit.tgz | tar xz
-pip install -q pillow requests
-python tools/viraliq/submit.py history   # what was already posted + next course day
-```
+Ping at every step: `ping history "ok"`, `ping drafts "N drafts written"`, `ping done "<titles>"`,
+and on ANY failure `ping error "<exact step and error>"` (the owner gets it on Telegram).
 
 ## What to make
 - **Morning run (08:00)** – 2 drafts:
@@ -65,16 +57,12 @@ Never repeat a topic that appears in `history`.
   `badge` e.g. "اليوم 7 من 100", "ترند اليوم", "خبر عاجل".
 
 ## Hand-off
-Write the drafts to `/tmp/drafts.json`:
+Write the drafts to `/tmp/drafts.json` (a JSON list, UTF-8):
 ```json
 [{"kind": "course", "title": "…", "text": "…", "hashtags": ["#الكود_الذهبي", "…"],
   "suggested_at": "2026-09-28 12:30", "sources": ["https://…"],
   "poster": {"badge": "اليوم 1 من 100", "title": "…", "hook": "…", "points": ["…", "…", "…"]}}]
 ```
-then `python tools/viraliq/submit.py send /tmp/drafts.json`. Check the output shows
-`"sent": N`. If anything fails at any step (clone, research, poster, upload), do not stop
-silently: run `python tools/viraliq/submit.py notify "⚠️ Viraliq: <what failed and the error>"`
-so the owner hears about it on Telegram, and say so plainly in your final message.
-Work autonomously: nobody is watching this session, never stop to ask a question.
-Look at one rendered poster (render it locally with `poster.py`) before sending if you
-changed its layout inputs a lot.
+then POST it to `$H/api/drafts` as above. The reply must contain `"ok": true` and a `tick`
+with `"sent"` ≥ 1; otherwise ping stage=error with the reply. Work autonomously: nobody is
+watching this session, never stop to ask a question.
