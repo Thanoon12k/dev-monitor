@@ -147,6 +147,7 @@ def load():
     s.setdefault("earned", 0)
     if not s.get("api_key"):
         s["api_key"] = secrets.token_urlsafe(24)
+        _write(STATE, s)
     for iid, label, kind, hint in DEFAULT_INPUTS:
         if iid not in s["inputs"]:
             s["inputs"][iid] = {"label": label, "kind": kind, "hint": hint, "by": "plan"}
