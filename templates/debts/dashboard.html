@@ -1,4 +1,4 @@
-{% extends "base.html" %}{% block title %}دفتر الدين{% endblock %}{% block body %}
+{% extends "debts/base.html" %}{% block actions %}<form method="post" action="{{ url_for('debts.logout') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost">🔒 قفل</button></form>{% endblock %}{% block body %}
 <style>
 .db-hero{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
 .db-hero .emoji{font-size:48px}
@@ -34,11 +34,10 @@ summary{cursor:pointer}
 <div class="card db-hero">
   <span class="emoji">🧾</span>
   <div style="flex:1;min-width:200px">
-    <h2 style="margin:0">دفتر الدين</h2>
+    <h2 style="margin:0">📒 {{ name }}</h2>
     <p class="mute" style="margin:2px 0 6px">مجموع اللي علي هسه</p>
     <div class="db-total">{{ total|iqd }} <span style="font-size:.45em">د.ع</span></div>
   </div>
-  <form method="post" action="{{ url_for('debts.logout') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost">🔒 قفل</button></form>
 </div>
 
 <form class="card" id="add" method="post" action="{{ url_for('debts.add') }}">
