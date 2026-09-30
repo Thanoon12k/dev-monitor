@@ -1,5 +1,6 @@
 """Claude's side of the /money/ inputs box.
 
+    python tools/money/review.py pending                     # only inputs waiting for review, one line each
     python tools/money/review.py state                       # plan + inputs (secrets stay masked)
     python tools/money/review.py ok <id> "note"              # mark an input correct
     python tools/money/review.py wrong <id> "what to fix"    # mark an input wrong
@@ -35,7 +36,12 @@ def call(path, data=None):
 
 
 def main(a):
-    if not a or a[0] == "state":
+    if not a or a[0] == "pending":
+        # one line per input waiting for review: the cheapest way to check what's new
+        for it in call("/api/state")["inputs"]:
+            if it["status"] == "sent":
+                print(f'{it["id"]} | {it["label"]} | {it["value"][:300]}'.replace("\n", " / "))
+    elif a[0] == "state":
         print(json.dumps(call("/api/state"), ensure_ascii=False, indent=1))
     elif a[0] in ("ok", "wrong") and len(a) >= 2:
         print(call("/api/review", {"id": a[1], "status": a[0], "note": a[2] if len(a) > 2 else ""}))
