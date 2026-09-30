@@ -1,0 +1,124 @@
+{% extends "base.html" %}{% block title %}دفتر الدين{% endblock %}{% block body %}
+<style>
+.db-hero{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.db-hero .emoji{font-size:48px}
+.db-total{font-family:var(--display);font-size:clamp(30px,7vw,44px);line-height:1.1;color:var(--accent)}
+.kinds{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.kinds button{width:100%}
+.kinds .pay{background:linear-gradient(135deg,#16a34a,#4ade80);box-shadow:3px 3px 0 #0a3a1c;color:#04210f}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.shops{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+.shop{border-inline-start:6px solid var(--accent);margin:0}
+.shop.zero{border-inline-start-color:var(--good)}
+.shop.credit{border-inline-start-color:#38bdf8}
+.shop h2{margin:0;font-size:20px}
+.shop .bal{font-family:var(--display);font-size:28px;margin:4px 0}
+.shop.zero .bal{color:var(--good)}
+.shop .acts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.shop .acts .btn,.shop .acts button{width:100%;text-align:center}
+.ent{list-style:none;padding:0;margin:10px 0 0;font-size:14px}
+.ent li{display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--line)}
+.ent li:last-child{border-bottom:0}
+.ent .amt{font-weight:700;white-space:nowrap}
+.ent .buy .amt{color:var(--accent)}.ent .pay .amt{color:var(--good)}
+.ent .txt{flex:1;min-width:0;overflow-wrap:anywhere}
+.ent form{margin:0}.ent .x{padding:0 8px;height:26px;font-size:13px;border-radius:8px;box-shadow:none;background:var(--panel2);color:var(--muted);border:1px solid var(--line)}
+summary{cursor:pointer}
+.arc{padding:10px 0;border-bottom:1px solid var(--line)}.arc:last-child{border-bottom:0}
+.arc summary{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.pill{font-size:12px;padding:3px 10px;border-radius:99px;background:var(--panel2);border:1px solid var(--line);color:var(--muted);font-weight:700}
+.pill.ok{background:var(--good);color:#04210f;border-color:transparent}
+@media (max-width:420px){.two{grid-template-columns:1fr}}
+</style>
+
+<div class="card db-hero">
+  <span class="emoji">🧾</span>
+  <div style="flex:1;min-width:200px">
+    <h2 style="margin:0">دفتر الدين</h2>
+    <p class="mute" style="margin:2px 0 6px">مجموع اللي علي هسه</p>
+    <div class="db-total">{{ total|iqd }} <span style="font-size:.45em">د.ع</span></div>
+  </div>
+</div>
+
+<form class="card" id="add" method="post" action="{{ url_for('debts.add') }}">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <h3 style="margin:0 0 4px">تسجيل جديد</h3>
+  <label for="f-shop">الدكان</label>
+  <select id="f-shop" name="shop" required>
+    <option value="">— اختار —</option>
+    {% for s in shops %}<option value="{{ s.id }}" {% if s.id == pick %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
+  </select>
+  <div class="two">
+    <div><label for="f-amt">المبلغ (دينار)</label><input id="f-amt" name="amount" inputmode="numeric" placeholder="مثلاً 15000" autocomplete="off"></div>
+    <div><label for="f-date">التاريخ</label><input id="f-date" type="date" name="date" value="{{ today }}"></div>
+  </div>
+  <label for="f-note">التفاصيل (اختياري)</label>
+  <input id="f-note" name="note" placeholder="خبز، بيض، غاز..." autocomplete="off">
+  <div class="kinds">
+    <button name="kind" value="buy">🛒 مسواك (دين)</button>
+    <button name="kind" value="pay" class="pay">💵 تسديد</button>
+  </div>
+</form>
+
+<div class="shops">
+{% for s in shops %}
+<div class="card shop{% if s.balance == 0 %} zero{% elif s.balance < 0 %} credit{% endif %}">
+  <h2>{{ s.name }}</h2>
+  {% if s.balance > 0 %}<div class="bal">{{ s.balance|iqd }} <span class="mute" style="font-size:.5em">د.ع</span></div>
+  <div class="mute">دين من {{ s.since }} · {{ s.entries|length }} تسجيل</div>
+  {% elif s.balance < 0 %}<div class="bal" style="color:#38bdf8">{{ (-s.balance)|iqd }} <span class="mute" style="font-size:.5em">د.ع</span></div>
+  <div class="mute">رصيد إلي عنده (دافع زايد)</div>
+  {% else %}<div class="bal">✔ صفر</div><div class="mute">ما علي شي</div>{% endif %}
+  <div class="acts">
+    <a class="btn ghost" href="?shop={{ s.id }}#add">🛒 سجّل</a>
+    {% if s.balance > 0 %}
+    <form method="post" action="{{ url_for('debts.add') }}" onsubmit="return confirm('تسدد كل دين {{ s.name }} ({{ s.balance|iqd }} د.ع)؟ الحساب راح يتصفر وينتقل للأرشيف.')">
+      <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="shop" value="{{ s.id }}">
+      <input type="hidden" name="date" value="{{ today }}">
+      <button name="kind" value="payall" class="pay" style="background:linear-gradient(135deg,#16a34a,#4ade80);box-shadow:3px 3px 0 #0a3a1c;color:#04210f">💵 سدد الكل</button>
+    </form>{% endif %}
+  </div>
+  {% if s.entries %}
+  <details style="margin-top:10px"><summary class="mute">التفاصيل</summary>
+  <ul class="ent">{% for e in s.entries %}
+    <li class="{{ e.kind }}">
+      <span class="amt">{% if e.kind == 'buy' %}+{% else %}−{% endif %}{{ e.amount|iqd }}</span>
+      <span class="txt">{{ 'مسواك' if e.kind == 'buy' else 'تسديد' }}{% if e.note %} · {{ e.note }}{% endif %}<br><span class="mute">{{ e.date }}</span></span>
+      <form method="post" action="{{ url_for('debts.delete') }}" onsubmit="return confirm('تحذف هذا التسجيل؟')">
+        <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="id" value="{{ e.id }}">
+        <button class="x" title="حذف">✕</button></form>
+    </li>{% endfor %}
+  </ul></details>{% endif %}
+</div>
+{% endfor %}
+</div>
+
+<details class="card" style="margin-top:18px"><summary><b>🏪 الدكاكين</b> <span class="mute">إضافة، تعديل اسم، حذف</span></summary>
+  <form method="post" action="{{ url_for('debts.shop') }}" class="row" style="margin-top:12px">
+    <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="action" value="add">
+    <input name="name" placeholder="اسم الدكان الجديد" required style="flex:1;min-width:160px"><button>➕ إضافة</button>
+  </form>
+  {% for s in shops %}
+  <form method="post" action="{{ url_for('debts.shop') }}" class="row" style="margin-top:10px">
+    <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="id" value="{{ s.id }}">
+    <input name="name" value="{{ s.name }}" style="flex:1;min-width:160px">
+    <button name="action" value="rename" class="btn ghost">حفظ</button>
+    <button name="action" value="remove" class="btn ghost" onclick="return confirm('تحذف {{ s.name }}؟')">🗑</button>
+  </form>{% endfor %}
+</details>
+
+<div class="card">
+  <h3 style="margin:0 0 6px">🗄️ الأرشيف <span class="mute" style="font-size:.6em">الحسابات اللي تصفرت</span></h3>
+  {% for a in archive %}
+  <details class="arc"><summary>
+    <b>{{ a.shop_name }}</b><span class="pill">{{ a.from }} ← {{ a.to }}</span>
+    <span class="pill">مسواك {{ a.bought|iqd }}</span><span class="pill ok">مسدد ✔</span></summary>
+    <ul class="ent">{% for e in a.entries %}
+      <li class="{{ e.kind }}"><span class="amt">{% if e.kind == 'buy' %}+{% else %}−{% endif %}{{ e.amount|iqd }}</span>
+      <span class="txt">{{ 'مسواك' if e.kind == 'buy' else 'تسديد' }}{% if e.note %} · {{ e.note }}{% endif %}<br><span class="mute">{{ e.date }}</span></span></li>{% endfor %}
+    </ul>
+  </details>
+  {% else %}<p class="mute" style="margin:0">لسه ماكو حساب متصفر.</p>{% endfor %}
+</div>
+<script>if(location.hash==="#add"&&document.getElementById("f-shop").value)document.getElementById("f-amt").focus()</script>
+{% endblock %}

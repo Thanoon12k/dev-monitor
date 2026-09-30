@@ -45,6 +45,7 @@ TOOLS = [
     ("مدير LinkedIn", "جدولة ونشر البوستات تلقائياً", "💼", "/linkedin/"),
     ("رائج · Viraliq", "منشورات الترند اليومية مع موافقة من تيليجرام", "🔥", "/viraliq/"),
     ("جلسات دورة تطبيق الموبايل", "8 جلسات × ساعتين، چك لست لكل جلسة", "📱", "/course/"),
+    ("دفتر الدين", "مسواك الدكاكين بالدين، التسديد، والأرشيف", "🧾", "/debts/"),
 ]
 
 
@@ -121,3 +122,6 @@ app.register_blueprint(viraliq_bp, url_prefix="/viraliq")
 
 from tools.course import bp as course_bp  # noqa: E402
 app.register_blueprint(course_bp, url_prefix="/course")
+
+from tools.debts import bp as debts_bp  # noqa: E402
+app.register_blueprint(debts_bp, url_prefix="/debts")
