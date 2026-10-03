@@ -304,6 +304,9 @@ def tick():
                           "sources": d.get("sources", []), "comment": d.get("comment") or "",
                           "image": f"{pid}.png", "status": "pending",
                           "suggested_at": sug.isoformat(), "created": now().isoformat(), "tg_msg": None})
+            own = cfg.get("req_photos", {}).pop(d.get("request") or "", None)
+            if own and os.path.exists(os.path.join(IMG, own)):
+                posts[-1]["user_photo"] = own
             if d.get("request") and d["request"] in cfg.get("auto_reqs", []):
                 cfg["auto_reqs"].remove(d["request"])
                 posts[-1].update(status="approved", scheduled_at=now().isoformat(), auto=True)
@@ -354,7 +357,7 @@ def on_callback(cfg, posts, cq):
             say(cfg, HELP_FORMAT)
         elif rest == "ask":
             cfg["await"] = {"kind": "ask"}
-            say(cfg, "🤖 اكتب الموضوع اللي تريد عنه منشور:", reply_markup={"force_reply": True})
+            say(cfg, ASK, reply_markup={"force_reply": True})
         elif rest == "queue":
             show_queue(cfg, posts)
         elif rest == "requests":
@@ -524,7 +527,8 @@ def compose(cfg, posts, msg, text):
     send_preview(cfg, p)
 
 
-HELP_FORMAT = ("⚡ تسوي منشور برسالة وحدة (ويا صورة إذا تحب) بهالشكل:\n\n"
+HELP_FORMAT = ("🔎 أي رابط أو فكرة أو نص تدزه هنا، أبحث عنه وأكمل منشور كامل.\n\n"
+               "⚡ وإذا عندك المنشور جاهز وتريده بدون بحث، دزه برسالة وحدة (ويا صورة إذا تحب) بهالشكل:\n\n"
                "5 أسئلة | قبل التسليم\n"
                "اسألهن لأي مبرمج قبل ما تنطيه مشروعك\n"
                "- وريني شغل سابق يشبه مشروعي\n"
@@ -533,15 +537,17 @@ HELP_FORMAT = ("⚡ تسوي منشور برسالة وحدة (ويا صورة �
                "تعليق: انت شنو تسأل قبل ما تدفع؟\n\n"
                "السطر الأول العنوان (| تقسمه لسطرين)، الثاني جملة قصيرة، بعدها 3 إلى 5 نقاط تبدي بـ - أو رقم، "
                "وسطر «تعليق:» إذا تريد تعليق أول.")
-COMMANDS = [("menu", "القائمة"), ("create", "أسوي منشور خطوة بخطوة"), ("post", "اطلب منشور عن موضوع"),
+ASK = ("🔎 دزلي رابط (مقال، خبر، فيديو، أداة) أو فكرة أو نص منشور تقريبي، وإذا تحب ويا صورة.\n"
+       "أبحث عنه، أتأكد من المعلومات، وأرجعلك المنشور كامل: النص + البوستر + التعليق الأول + الوقت المقترح.")
+COMMANDS = [("menu", "القائمة"), ("create", "أسوي منشور خطوة بخطوة"), ("post", "دز رابط أو فكرة وأني أكمل المنشور"),
             ("queue", "المنشورات المنتظرة"), ("help", "شلون أسوي منشور برسالة وحدة"), ("cancel", "إلغاء الخطوة الحالية")]
 
 
 def menu(cfg):
     say(cfg, "شتريد تسوي؟ 👇", reply_markup={"inline_keyboard": [
         [{"text": "✍️ أسوي منشور خطوة بخطوة", "callback_data": "menu:create"}],
-        [{"text": "⚡ منشور من رسالة وحدة", "callback_data": "menu:quick"}],
-        [{"text": "🤖 اطلب منشور عن موضوع", "callback_data": "menu:ask"}],
+        [{"text": "🔎 دز رابط أو فكرة وأني أكمله", "callback_data": "menu:ask"}],
+        [{"text": "⚡ منشور جاهز من رسالة وحدة", "callback_data": "menu:quick"}],
         [{"text": "📋 المنشورات المنتظرة", "callback_data": "menu:queue"},
          {"text": "📝 الطلبات", "callback_data": "menu:requests"}],
     ]})
@@ -615,7 +621,7 @@ def on_message(cfg, posts, msg):
                      "لازم تضيف البوت أدمن بالقناة حتى يكدر ينشر.")
         elif cmd == "/post" and not arg.strip():
             cfg["await"] = {"kind": "ask"}
-            say(cfg, "🤖 اكتب الموضوع اللي تريد عنه منشور:", reply_markup={"force_reply": True})
+            say(cfg, ASK, reply_markup={"force_reply": True})
         elif cmd == "/post":
             request_post(cfg, arg)
         elif cmd == "/postnow":
@@ -625,7 +631,9 @@ def on_message(cfg, posts, msg):
         else:
             say(cfg, "أهلاً 👋 أني بوت رائج (Viraliq).\nكل يوم الساعة 8 الصبح و8 بالليل أبحث عن الترند وأرسلك مسودات "
                      "منشورات مع بوستر، وانت توافق أو تعدّل أو تغيّر الوقت أو تلغي.\n\n"
-                     "✍️ تريد تسوي منشور بنفسك؟ ارسلي رسالة (ويا صورة إذا تحب) بهالشكل:\n"
+                     "🔎 دزلي أي رابط أو فكرة أو نص منشور (ويا صورة إذا تحب): أبحث عنه، أتأكد، "
+                     "وأرجعلك المنشور كامل مع البوستر والتعليق الأول والوقت المقترح.\n\n"
+                     "✍️ عندك منشور جاهز بنقاطه؟ ارسلي رسالة (ويا صورة إذا تحب) بهالشكل:\n"
                      "السطر الأول = العنوان (تكدر تقسمه لسطرين بـ |)\n"
                      "السطر الثاني = جملة قصيرة تحت العنوان\n"
                      "بعدها 3 إلى 5 نقاط، كل نقطة تبدي بـ - أو رقم\n"
@@ -641,11 +649,14 @@ def on_message(cfg, posts, msg):
         return
     if wait.get("kind") == "ask":
         cfg.pop("await", None)
-        request_post(cfg, text)
+        request_post(cfg, text, photo=download_photo(cfg, msg) if msg.get("photo") else None)
         return
     p = find(posts, wait.get("id", 0))
-    if not p:  # free text (or a photo with a caption) outside an edit = compose a new post from it
-        compose(cfg, posts, msg, text)
+    if not p:  # free text, a link or a photo outside an edit
+        if sum(1 for ln in text.splitlines() if BULLET.match(ln)) >= 3:
+            compose(cfg, posts, msg, text)  # already a full post: title + points, no research needed
+        else:
+            request_post(cfg, text, photo=download_photo(cfg, msg) if msg.get("photo") else None)
         return
     if wait["kind"] == "comment":
         cfg.pop("await", None)
@@ -679,13 +690,14 @@ def on_message(cfg, posts, msg):
         send_preview(cfg, p)
 
 
-MAX_REQUESTS_PER_DAY = 6
+MAX_REQUESTS_PER_DAY = 10
 
 
-def request_post(cfg, topic, auto=False):
-    """Queue `topic` for the content agent (GitHub Actions + GitHub Models, polls every 15 min).
+def request_post(cfg, topic, auto=False, photo=None):
+    """Queue `topic` (a subject, a link or a rough post text) for research and writing.
 
     With auto=True the finished post skips approval and is published as soon as it arrives.
+    `photo` (bytes) is kept and offered on the finished post as "use my photo".
     Returns the message shown to the owner (also sent on Telegram).
     """
     topic = (topic or "").strip()
@@ -697,11 +709,19 @@ def request_post(cfg, topic, auto=False):
         return say_back(cfg, f"وصلت حد اليوم ({MAX_REQUESTS_PER_DAY} طلبات). باجر نكمل 🙏")
     rid = secrets.token_hex(3)
     cfg["requests"] = {day: used + 1}
-    cfg["queue"] = (cfg.get("queue", []) + [{"id": rid, "topic": topic[:1500], "at": now().isoformat()}])[-20:]
+    item = {"id": rid, "topic": topic[:3000], "at": now().isoformat()}
+    if photo:
+        item["photo"] = f"req-{rid}.jpg"
+        with open(os.path.join(IMG, item["photo"]), "wb") as out:
+            out.write(photo)
+        cfg["req_photos"] = dict(list(cfg.get("req_photos", {}).items())[-19:], **{rid: item["photo"]})
+    cfg["queue"] = (cfg.get("queue", []) + [item])[-20:]
     if auto:
         cfg["auto_reqs"] = (cfg.get("auto_reqs", []) + [rid])[-20:]
         return say_back(cfg, f"📝 انضاف للطابور: «{topic[:200]}»\n🚀 من يجهز ينتشر مباشرة بدون موافقة، ويوصلك هنا.")
-    return say_back(cfg, f"📝 انضاف للطابور: «{topic[:200]}»\nالمسودة مع البوستر توصلك هنا ويا أقرب دفعة كتابة.")
+    return say_back(cfg, f"🔎 وصلني: «{topic[:200]}»\nراح أبحث عنه وأتأكد من المعلومات، وأرسلك المنشور كامل هنا "
+                         "(النص + البوستر + التعليق الأول + الوقت المقترح) خلال ساعة تقريباً "
+                         "(من 8 الصبح لـ 11 بالليل)، وانت تختار تنشره، تجدوله، أو تنشره بنفسك.")
 
 
 def say_back(cfg, text):
@@ -843,6 +863,18 @@ def api_requests():
             rid = (request.get_json(silent=True) or {}).get("id")
             cfg["queue"] = [q for q in cfg.get("queue", []) if q["id"] != rid]
         return {"queue": cfg.get("queue", [])}
+
+
+@bp.route("/api/request-photo/<rid>")
+def api_request_photo(rid):
+    """The photo the owner attached to a request, so the writer can see it."""
+    if not api_ok():
+        abort(403)
+    with state() as (cfg, _):
+        name = cfg.get("req_photos", {}).get(rid)
+    if not name:
+        abort(404)
+    return send_file(os.path.join(IMG, name), mimetype="image/jpeg")
 
 
 @bp.route("/routine.md")
