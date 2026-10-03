@@ -108,11 +108,17 @@ def tg(cfg, method, files=None, **params):
         return {"ok": False, "description": str(e)}
 
 
-def keyboard(pid):
-    return {"inline_keyboard": [
-        [{"text": "✅ موافقة", "callback_data": f"ok:{pid}"}, {"text": "✏️ تعديل", "callback_data": f"edit:{pid}"}],
-        [{"text": "🕒 تغيير الوقت", "callback_data": f"time:{pid}"}, {"text": "❌ إلغاء", "callback_data": f"no:{pid}"}],
-    ]}
+def keyboard(pid, p=None):
+    rows = [
+        [{"text": "✅ جدولة بالوقت المقترح", "callback_data": f"ok:{pid}"}, {"text": "🚀 انشر الآن", "callback_data": f"now:{pid}"}],
+        [{"text": "🕒 وقت ثاني", "callback_data": f"time:{pid}"}, {"text": "✏️ تعديل النص", "callback_data": f"edit:{pid}"}],
+        [{"text": "💬 تعليق أول", "callback_data": f"comment:{pid}"}, {"text": "📋 أنشره بنفسي", "callback_data": f"self:{pid}"}],
+    ]
+    if p and p.get("user_photo"):
+        rows.append([{"text": "🖼 استخدم صورتي" if not p.get("use_user_photo") else "🎨 رجّع البوستر",
+                      "callback_data": f"photo:{pid}"}])
+    rows.append([{"text": "❌ إلغاء", "callback_data": f"no:{pid}"}])
+    return {"inline_keyboard": rows}
 
 
 def time_keyboard(pid):
@@ -135,21 +141,33 @@ def status_line(p):
                     + (" · 📅 مجدول داخل فيسبوك" if p.get("fb_sched") else ""),
         "published": f"🚀 نُشر {fmt(p.get('published_at'))}",
         "cancelled": "❌ ملغي",
+        "manual": "📋 تنشره بنفسك",
     }[p["status"]]
+
+
+def post_image(p):
+    """The image that gets published: the owner's own photo when chosen, else the card."""
+    if p.get("use_user_photo") and p.get("user_photo"):
+        return os.path.join(IMG, p["user_photo"])
+    return os.path.join(IMG, p["image"])
+
+
+def preview_body(p):
+    src = "\n".join(f"🔗 {u}" for u in p.get("sources", [])[:3])
+    com = f"\n\n💬 التعليق الأول:\n{p['comment']}" if p.get("comment") else ""
+    return (f"{full_text(p)}{com}\n\n━━━━━━━━\n{status_line(p)}" + (f"\n\nالمصادر:\n{src}" if src else ""))[:4096]
 
 
 def send_preview(cfg, p):
     """Poster (with short caption) followed by the full post text + buttons."""
     chat = cfg.get("chat_id", DEFAULT_CHAT)
-    with open(os.path.join(IMG, p["image"]), "rb") as f:
+    with open(post_image(p), "rb") as f:
         r = tg(cfg, "sendPhoto", files={"photo": f}, chat_id=chat,
                caption=f"🆕 منشور #{p['id']} · {p.get('kind', '')}\n{p['title']}")
     if not r.get("ok"):
         p["tg_err"] = f"sendPhoto: {r.get('description')}"
         return False
-    src = "\n".join(f"🔗 {u}" for u in p.get("sources", [])[:3])
-    body = f"{full_text(p)}\n\n━━━━━━━━\n{status_line(p)}" + (f"\n\nالمصادر:\n{src}" if src else "")
-    r2 = tg(cfg, "sendMessage", chat_id=chat, text=body[:4096], reply_markup=keyboard(p["id"]),
+    r2 = tg(cfg, "sendMessage", chat_id=chat, text=preview_body(p), reply_markup=keyboard(p["id"], p),
             disable_web_page_preview=True)
     p["tg_msg"] = r2.get("result", {}).get("message_id")
     if not r2.get("ok"):
@@ -161,8 +179,8 @@ def refresh(cfg, p, extra=""):
     """Rewrite the preview message's status line; keep buttons while it is still actionable."""
     if not p.get("tg_msg"):
         return
-    body = f"{full_text(p)}\n\n━━━━━━━━\n{status_line(p)}" + (f"\n{extra}" if extra else "")
-    kb = keyboard(p["id"]) if p["status"] in ("pending", "approved") else {"inline_keyboard": []}
+    body = preview_body(p) + (f"\n{extra}" if extra else "")
+    kb = keyboard(p["id"], p) if p["status"] in ("pending", "approved") else {"inline_keyboard": []}
     tg(cfg, "editMessageText", chat_id=cfg.get("chat_id", DEFAULT_CHAT), message_id=p["tg_msg"],
        text=body[:4096], reply_markup=kb, disable_web_page_preview=True)
 
@@ -193,7 +211,7 @@ def fb_schedule(cfg, p):
     if not page or p.get("fb_sched") or p.get("fb_err") or not now() + timedelta(minutes=11) <= t <= now() + timedelta(days=29):
         return
     try:
-        with open(os.path.join(IMG, p["image"]), "rb") as f:
+        with open(post_image(p), "rb") as f:
             r = requests.post(GRAPH + page + "/photos", files={"source": f}, timeout=60, data={
                 "caption": full_text(p), "published": "false", "scheduled_publish_time": int(t.timestamp()),
                 "access_token": token}).json()
@@ -219,8 +237,17 @@ def fb_unschedule(cfg, p):
             pass
 
 
+def fb_comment(token, obj_id, message):
+    try:
+        r = requests.post(GRAPH + obj_id + "/comments", timeout=30,
+                          data={"message": message, "access_token": token}).json()
+    except (requests.RequestException, ValueError) as e:
+        r = {"error": {"message": str(e)}}
+    return "✅" if r.get("id") else f"❌ {r.get('error', {}).get('message')}"
+
+
 def publish(cfg, p):
-    text, img, done = full_text(p), os.path.join(IMG, p["image"]), []
+    text, img, done = full_text(p), post_image(p), []
     if cfg.get("channel"):
         with open(img, "rb") as f:
             if len(text) <= 1024:
@@ -232,6 +259,8 @@ def publish(cfg, p):
     page, token = fb_target(cfg)
     if p.get("fb_sched"):
         done.append("فيسبوك: ✅ (انتشر من جدولة فيسبوك)")
+        if p.get("comment") and token:
+            done.append("التعليق الأول: " + fb_comment(token, p["fb_sched"], p["comment"]))
     elif page:
         try:
             with open(img, "rb") as f:
@@ -240,6 +269,8 @@ def publish(cfg, p):
         except (requests.RequestException, ValueError) as e:
             r = {"error": {"message": str(e)}}
         done.append("فيسبوك: " + ("✅" if r.get("id") else f"❌ {r.get('error', {}).get('message')}"))
+        if r.get("id") and p.get("comment"):
+            done.append("التعليق الأول: " + fb_comment(token, r["id"], p["comment"]))
     p["status"], p["published_at"] = "published", now().isoformat()
     p["result"] = done
     if done:
@@ -270,7 +301,8 @@ def tick():
             sug = parse_time(d.get("suggested_at", "")) or now() + timedelta(hours=2)
             posts.append({"id": pid, "kind": d.get("kind", "trend"), "title": d.get("title", ""),
                           "text": d.get("text", ""), "hashtags": d.get("hashtags", []),
-                          "sources": d.get("sources", []), "image": f"{pid}.png", "status": "pending",
+                          "sources": d.get("sources", []), "comment": d.get("comment") or "",
+                          "image": f"{pid}.png", "status": "pending",
                           "suggested_at": sug.isoformat(), "created": now().isoformat(), "tg_msg": None})
             if d.get("request") and d["request"] in cfg.get("auto_reqs", []):
                 cfg["auto_reqs"].remove(d["request"])
@@ -322,6 +354,24 @@ def on_callback(cfg, posts, cq):
         t = datetime.fromisoformat(p.get("scheduled_at") or p["suggested_at"])
         p["status"], p["scheduled_at"] = "approved", max(t, now() + timedelta(minutes=1)).isoformat()
         refresh(cfg, p)  # the tick after this webhook schedules it inside Facebook
+    elif action == "now":
+        fb_unschedule(cfg, p)
+        p["status"], p["scheduled_at"] = "approved", now().isoformat()
+        publish(cfg, p)
+    elif action == "self":
+        hand_over(cfg, p)
+    elif action == "comment":
+        cfg["await"] = {"kind": "comment", "id": pid}
+        say(cfg, f"💬 اكتب التعليق الأول لمنشور #{pid} (ينزل تحت المنشور أول ما ينتشر).\nلحذفه اكتب: لا\nللتراجع: /skip",
+            reply_markup={"force_reply": True})
+    elif action == "photo":
+        p["use_user_photo"] = not p.get("use_user_photo")
+        fb_unschedule(cfg, p)
+        if p.get("tg_msg"):
+            tg(cfg, "editMessageReplyMarkup", chat_id=cfg.get("chat_id", DEFAULT_CHAT), message_id=p["tg_msg"],
+               reply_markup={"inline_keyboard": []})
+        p["tg_msg"] = None
+        send_preview(cfg, p)
     elif action == "no":
         fb_unschedule(cfg, p)
         p["status"] = "cancelled"
@@ -343,11 +393,119 @@ def on_callback(cfg, posts, cq):
             tg(cfg, "deleteMessage", chat_id=cfg.get("chat_id", DEFAULT_CHAT), message_id=cq["message"]["message_id"])
 
 
+def hand_over(cfg, p):
+    """Owner posts it by hand: send the image as a file plus the texts, ready to copy."""
+    fb_unschedule(cfg, p)
+    chat = cfg.get("chat_id", DEFAULT_CHAT)
+    with open(post_image(p), "rb") as f:
+        tg(cfg, "sendDocument", files={"document": (f"golden-code-{p['id']}.png", f)}, chat_id=chat,
+           caption=f"📋 منشور #{p['id']} جاهز تنشره بنفسك: الصورة بجودة كاملة، والنص بالرسالة الجاية")
+    say(cfg, full_text(p)[:4096])
+    if p.get("comment"):
+        say(cfg, "💬 التعليق الأول (انسخه وحطه تحت المنشور):\n\n" + p["comment"])
+    p["status"] = "manual"
+    refresh(cfg, p)
+
+
 def set_time(cfg, p, t):
     fb_unschedule(cfg, p)
     p["scheduled_at"], p["status"] = t.isoformat(), "approved"
     refresh(cfg, p)
     say(cfg, f"✅ #{p['id']} راح ينتشر {fmt(p['scheduled_at'])}")
+
+
+BULLET = re.compile(r"^\s*(?:[-•*▪◦●✅✔☑🔹🔸👉]|(?:\d+|[٠-٩]+)\s*[.)\-:،]|\((?:\d+|[٠-٩]+)\))\s*")
+COMMENT = re.compile(r"^\s*(?:💬\s*)?(?:التعليق الأول|تعليق أول|تعليق|comment)\s*[:：]\s*", re.I)
+LABEL = re.compile(r"^\s*(?:العنوان|عنوان|title)\s*[:：]\s*", re.I)
+
+
+def parse_compose(text):
+    """Owner's message -> card fields + a simple post text.
+
+    Line 1 is the title ("|" splits it into two lines), the next plain line is the subtitle,
+    bulleted or numbered lines are the 3-5 outlines, a "تعليق:" line starts the first comment,
+    and any other plain lines are the post's own text.
+    """
+    lines = [ln.rstrip() for ln in text.strip().splitlines()]
+    comment, body_lines = [], []
+    for i, ln in enumerate(lines):
+        if COMMENT.match(ln):
+            comment = [COMMENT.sub("", ln)] + lines[i + 1:]
+            lines = lines[:i]
+            break
+    plain = [ln for ln in lines if ln.strip()]
+    title = LABEL.sub("", plain[0]).strip() if plain else ""
+    sub, points = "", []
+    for ln in plain[1:]:
+        if BULLET.match(ln):
+            points.append(BULLET.sub("", ln).strip())
+        elif not sub and not points and len(ln) <= 110:
+            sub = ln.strip()
+        else:
+            body_lines.append(ln.strip())
+    if not points:  # no bullets: short body lines/sentences become the outlines
+        pool = [x.strip().rstrip(".") for ln in body_lines for x in re.split(r"(?<=[.!؟?])\s+", ln) if x.strip()]
+        points = [x for x in pool if len(x) <= 60][:5]
+    points = [x[:70] for x in points[:5]]
+    title_flat = re.sub(r"\s*\|\s*", " ", title).strip()
+    if body_lines:  # the owner wrote their own post text: keep it as is
+        post = "\n".join([title_flat] + ([sub] if sub else []) + [""] + body_lines)
+        if points and not any(pt in post for pt in points):
+            post += "\n\n" + "\n".join(f"• {pt}" for pt in points)
+    else:  # build a short, plain post from the card
+        post = title_flat + (f"\n{sub}" if sub else "") + "\n\n" + "\n".join(f"• {pt}" for pt in points)
+        post += "\n\nشنو رأيك؟ اكتبلنا بالتعليقات 👇" if "؟" in title or "?" in title else "\n\nاحفظه حتى ترجعله 🔖"
+    kind = "debate" if ("؟" in title or "?" in title) else "tip"
+    return {"kind": kind, "title": title, "sub": sub, "points": points,
+            "text": post.strip(), "comment": "\n".join(comment).strip()}
+
+
+def next_slot():
+    n = now()
+    for h, m in ((12, 30), (16, 0), (21, 30)):
+        t = n.replace(hour=h, minute=m, second=0, microsecond=0)
+        if t > n + timedelta(minutes=30):
+            return t
+    return (n + timedelta(days=1)).replace(hour=12, minute=30, second=0, microsecond=0)
+
+
+def download_photo(cfg, msg):
+    f = tg(cfg, "getFile", file_id=msg["photo"][-1]["file_id"]).get("result", {})
+    if not f.get("file_path"):
+        return None
+    try:
+        return requests.get(f"https://api.telegram.org/file/bot{cfg['token']}/{f['file_path']}", timeout=60).content
+    except requests.RequestException:
+        return None
+
+
+def compose(cfg, posts, msg, text):
+    """Build a card + post from the owner's message and send it back with the action buttons."""
+    from .poster import render
+    if not text:
+        say(cfg, "📷 وصلت الصورة. ارسلها مرة ثانية ويا نص (عنوان ونقاط) حتى أسوي منها منشور.")
+        return
+    d = parse_compose(text)
+    if len(d["points"]) < 3:
+        say(cfg, "✍️ أحتاج على الأقل 3 نقاط حتى أسوي البوستر. مثال:\n\n"
+                 "5 أسئلة | قبل التسليم\nاسألهن لأي مبرمج قبل ما تنطيه مشروعك\n"
+                 "- وريني شغل سابق يشبه مشروعي\n- الكود راح يكون مالي؟\n- شنو اللي ما راح يشمله السعر؟\n"
+                 "تعليق: انت شنو تسأل قبل ما تدفع؟")
+        return
+    pid = max([p["id"] for p in posts] + [0]) + 1
+    render({"kind": d["kind"], "title": d["title"], "sub": d["sub"], "points": d["points"]},
+           os.path.join(IMG, f"{pid}.png"))
+    p = {"id": pid, "kind": d["kind"], "title": re.sub(r"\s*\|\s*", " ", d["title"]), "text": d["text"], "hashtags": [],
+         "comment": d["comment"], "sources": [], "image": f"{pid}.png", "status": "pending",
+         "suggested_at": next_slot().isoformat(), "created": now().isoformat(), "tg_msg": None, "own": True}
+    if msg.get("photo"):
+        data = download_photo(cfg, msg)
+        if data:
+            p["user_photo"] = f"{pid}-own.jpg"
+            with open(os.path.join(IMG, p["user_photo"]), "wb") as out:
+                out.write(data)
+    posts.append(p)
+    send_preview(cfg, p)
 
 
 def on_message(cfg, posts, msg):
@@ -373,14 +531,25 @@ def on_message(cfg, posts, msg):
         else:
             say(cfg, "أهلاً 👋 أني بوت رائج (Viraliq).\nكل يوم الساعة 8 الصبح و8 بالليل أبحث عن الترند وأرسلك مسودات "
                      "منشورات مع بوستر، وانت توافق أو تعدّل أو تغيّر الوقت أو تلغي.\n\n"
-                     "✍️ تريد منشور عن موضوع معين؟ اكتبه برسالة (أو /post الموضوع) وأبحث وأكمله مع بوستر.\n"
-                     "🚀 /postnow الموضوع: نفسه بس ينتشر مباشرة من يجهز بدون موافقة.\n\n"
+                     "✍️ تريد تسوي منشور بنفسك؟ ارسلي رسالة (ويا صورة إذا تحب) بهالشكل:\n"
+                     "السطر الأول = العنوان (تكدر تقسمه لسطرين بـ |)\n"
+                     "السطر الثاني = جملة قصيرة تحت العنوان\n"
+                     "بعدها 3 إلى 5 نقاط، كل نقطة تبدي بـ - أو رقم\n"
+                     "وإذا تريد تعليق أول: سطر يبدي بـ «تعليق:»\n"
+                     "وأني أسوي البوستر والنص، وانت تختار: تنشره هسه، تجدوله، أو تنشره بنفسك.\n\n"
                      "/queue المنشورات المنتظرة\n/channel @اسم_القناة لتحديد قناة النشر التلقائي\n"
                      f"معرّف المحادثة: {msg['chat']['id']}")
         return
     p = find(posts, wait.get("id", 0))
-    if not p:  # free text outside an edit = a request for a new post on that topic
-        request_post(cfg, text)
+    if not p:  # free text (or a photo with a caption) outside an edit = compose a new post from it
+        compose(cfg, posts, msg, text)
+        return
+    if wait["kind"] == "comment":
+        cfg.pop("await", None)
+        p["comment"] = "" if text in ("لا", "حذف", "-") else text
+        fb_unschedule(cfg, p)  # a scheduled Facebook post is recreated on the next tick
+        refresh(cfg, p)
+        say(cfg, "💬 انحفظ التعليق الأول." if p["comment"] else "انحذف التعليق الأول.")
         return
     if wait["kind"] == "time":
         t = parse_time(text)
@@ -392,11 +561,11 @@ def on_message(cfg, posts, msg):
     elif wait["kind"] == "edit":
         cfg.pop("await", None)
         if msg.get("photo"):
-            f = tg(cfg, "getFile", file_id=msg["photo"][-1]["file_id"]).get("result", {})
-            if f.get("file_path"):
-                data = requests.get(f"https://api.telegram.org/file/bot{cfg['token']}/{f['file_path']}", timeout=60).content
+            data = download_photo(cfg, msg)
+            if data:
                 with open(os.path.join(IMG, p["image"]), "wb") as out:
                     out.write(data)
+                p["use_user_photo"] = False
         if text:  # the new text is the whole post, hashtags included
             p["text"], p["hashtags"] = text, []
         fb_unschedule(cfg, p)  # rescheduled with the new content on the next tick
@@ -515,7 +684,8 @@ def api_drafts():
         spec.setdefault("title", d["title"])
         base = os.path.join(INBOX, f"{stamp}-api{i}")
         render(spec, base + ".png")
-        meta = {k: d.get(k) for k in ("kind", "title", "text", "hashtags", "suggested_at", "sources", "request")}
+        meta = {k: d.get(k) for k in ("kind", "title", "text", "hashtags", "suggested_at", "sources", "request",
+                                      "comment")}
         _save(base + ".json", meta)
         names.append(d["title"])
     return {"ok": True, "queued": names, "tick": tick()}

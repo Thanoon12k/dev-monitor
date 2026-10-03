@@ -46,22 +46,26 @@ Never repeat a topic that appears in `history`.
 - Useful first: the reader should learn something or get a link they can use.
 - Stay away from politics, religion, sectarian topics, personal attacks, rumours.
   For a "debate", present both sides neutrally.
-- Language: clear Modern Arabic with a light Iraqi warmth; short paragraphs,
-  a strong first-line hook, 2–4 relevant emojis, and a question or call to action
-  at the end ("تابع الصفحة حتى…", "شاركها لصديق…").
-- `text` 600–1100 characters. 5–8 `hashtags` mixing Arabic and English
-  (e.g. `#ذكاء_اصطناعي #تقنية #AI`), always including `#الكود_الذهبي`.
+- Write like a person, not a news agency: plain Iraqi-flavoured Arabic, short
+  sentences, talk to the reader ("انت"), no hype words, no long intros.
+  `text` 250–600 characters: one hook line, 2–4 short lines or bullets, one simple
+  question or call to action. At most 2 emojis. 2–4 `hashtags`, always `#الكود_الذهبي`.
+- `comment` (optional): a short first comment the page adds under the post, e.g. the
+  link, a source, or a question that starts the discussion.
 - About once a week, end with a soft line that Golden Code builds apps, websites and
   automation for businesses — never more than one line, never in every post.
-- Poster: `title` ≤ 60 chars, `hook` ≤ 90 chars, 3–4 `points` ≤ 45 chars each,
-  `badge` e.g. "اليوم 7 من 100", "ترند اليوم", "خبر عاجل".
+- Poster (card design): `tag` (1–2 words, e.g. نصيحة / خبر / سؤال), `label` (short pill,
+  e.g. "اليوم 7 من 100", "قبل ما تدفع"), `title` ≤ 30 chars, split into two lines with "|"
+  (e.g. "٥ أسئلة | قبل التسليم"), `sub` ≤ 60 chars, 3–5 `points` ≤ 35 chars each,
+  optional `warn` (number of the point to highlight in red), `cta` (احفظه / علّق / شاركه / تابعنا).
 
 ## Hand-off
 Write the drafts to `/tmp/drafts.json` (a JSON list, UTF-8):
 ```json
-[{"kind": "course", "title": "…", "text": "…", "hashtags": ["#الكود_الذهبي", "…"],
-  "suggested_at": "2026-09-28 12:30", "sources": ["https://…"],
-  "poster": {"badge": "اليوم 1 من 100", "title": "…", "hook": "…", "points": ["…", "…", "…"]}}]
+[{"kind": "tip", "title": "…", "text": "…", "hashtags": ["#الكود_الذهبي", "…"],
+  "comment": "…", "suggested_at": "2026-09-28 12:30", "sources": ["https://…"],
+  "poster": {"tag": "نصيحة", "label": "قبل ما تدفع", "title": "٥ أسئلة | قبل التسليم",
+             "sub": "…", "points": ["…", "…", "…"], "cta": "احفظه"}}]
 ```
 then POST it to `$H/api/drafts` as above. The reply must contain `"ok": true` and a `tick`
 with `"sent"` ≥ 1; otherwise ping stage=error with the reply. Work autonomously: nobody is

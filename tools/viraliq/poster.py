@@ -1,32 +1,43 @@
-"""Render a 1080x1350 Arabic poster for a Viraliq post.
+"""Render a 1080x1080 Golden Code card (cream dotted page, white sheet, gold title boxes).
 
     python tools/viraliq/poster.py spec.json out.png
 
-spec: {"kind": "trend|news|course|tip|debate", "badge": "...", "title": "...",
-       "hook": "...", "points": ["...", ...], "footer": "..."}
-Needs Pillow built with libraqm (for Arabic shaping); falls back to
-arabic_reshaper + python-bidi when raqm is missing.
+spec: {"kind": "tip|news|course|debate|trend|work",
+       "tag": "نصيحة", "label": "قبل ما تدفع",          # the two pills (defaults by kind)
+       "title": "٥ أسئلة | قبل التسليم",                  # 1-2 lines: "|" or newline splits
+       "sub": "one short line under the title",
+       "points": ["...", "...", "..."],                    # 3 to 5 outlines
+       "warn": 3,                                          # optional: point number drawn in coral
+       "follow": "تابعنا — ...", "cta": "احفظه"}
+Old fields still work: "badge" (-> label), "hook" (-> sub).
+Needs Pillow with libraqm for Arabic shaping (falls back to arabic_reshaper + python-bidi).
 """
 import json
 import os
 import sys
-from datetime import datetime, timedelta, timezone
 
-from PIL import Image, ImageDraw, ImageFilter, ImageFont, features
+from PIL import Image, ImageDraw, ImageFont, features
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FONT = os.path.join(HERE, "fonts", "Cairo.ttf")
-W, H, PAD = 1080, 1350, 80
 RAQM = features.check("raqm")
-BRAND = os.environ.get("VIRALIQ_BRAND", "Golden Code · الكود الذهبي")
+S = 1080
 
-# Golden Code identity: near-black with warm gold, as on the page cover.
-BG_TOP, BG_BOTTOM = (10, 8, 5), (38, 28, 10)
-GOLD_HI, GOLD_LO = (250, 214, 110), (200, 140, 24)
-GOLD = (239, 193, 76)
-LOGO = os.path.join(HERE, "assets", "logo.png")
-BADGES = {"trend": "ترند اليوم", "news": "خبر تقني", "course": "دورة مجانية",
-          "tip": "نصيحة اليوم", "debate": "جدل السوشيال"}
+CREAM, PAPER, INK = (255, 246, 234), (255, 255, 255), (22, 19, 13)
+GOLD, CORAL, TEAL = (255, 201, 60), (255, 92, 57), (18, 185, 156)
+MUTED, WARN_BG = (92, 85, 74), (255, 224, 216)
+
+FOLLOW = "تابعنا — كل أسبوع أداة أو موقع ينفعك بشغلك"
+BRAND = "الكود الذهبي"
+DEFAULTS = {  # kind -> (tag, label, cta)
+    "tip": ("نصيحة", "احفظه", "احفظه"),
+    "news": ("خبر", "تقنية", "شاركه"),
+    "course": ("دورة مجانية", "تعلّم ببلاش", "احفظه"),
+    "debate": ("سؤال", "شنو رأيك؟", "علّق"),
+    "trend": ("ترند", "اليوم", "شاركه"),
+    "work": ("شغلنا", "الموصل", "راسلنا"),
+}
+AR_DIGITS = str.maketrans("0123456789", "٠١٢٣٤٥٦٧٨٩")
 
 
 def font(size, weight=700):
@@ -46,149 +57,159 @@ def shape(text):
     return get_display(arabic_reshaper.reshape(text))
 
 
-def tlen(f, text):
-    return f.getlength(shape(text), direction="rtl") if RAQM else f.getlength(shape(text))
+KW = {"direction": "rtl"} if RAQM else {}
 
 
-def wrap(text, f, width):
+def width(f, text):
+    return f.getlength(shape(text), **KW)
+
+
+def wrap(text, f, max_w):
     lines, cur = [], ""
     for word in text.split():
         cand = (cur + " " + word).strip()
-        if cur and tlen(f, cand) > width:
+        if cur and width(f, cand) > max_w:
             lines.append(cur)
             cur = word
         else:
             cur = cand
-    if cur:
-        lines.append(cur)
-    return lines
+    return lines + ([cur] if cur else [])
 
 
-def rtl(d, x, y, text, f, fill):
-    """Draw text right-aligned so its right edge sits at x."""
-    kw = {"direction": "rtl"} if RAQM else {}
-    d.text((x, y), shape(text), font=f, fill=fill, anchor="ra", **kw)
+def text_at(d, xy, text, f, fill, anchor="ra"):
+    d.text(xy, shape(text), font=f, fill=fill, anchor=anchor, **KW)
 
 
-def fit(text, width, max_lines, start, low):
-    size = start
-    while size > low:
-        lines = wrap(text, font(size, 900), width)
-        if len(lines) <= max_lines:
-            return size, lines
-        size -= 4
-    return low, wrap(text, font(low, 900), width)[:max_lines]
+def pill(d, right, top, text, f, bg, fg, pad_x=24, h=None, shadow=0, left=None):
+    """Rounded pill with a 4px ink border; anchored at its right edge (or left edge)."""
+    w = width(f, text) + 2 * pad_x
+    h = h or f.size + 24
+    x1 = right - w if left is None else left
+    x2 = x1 + w
+    if shadow:
+        d.rounded_rectangle((x1 - shadow, top + shadow, x2 - shadow, top + h + shadow), h // 2, fill=INK)
+    d.rounded_rectangle((x1, top, x2, top + h), h // 2, fill=bg, outline=INK, width=4)
+    text_at(d, ((x1 + x2) / 2, top + h / 2 + 1), text, f, fg, anchor="mm")
+    return x1, x2, h
 
 
-def gradient(size, c1, c2):
-    w, h = size
-    img = Image.new("RGB", size)
-    d = ImageDraw.Draw(img)
-    for y in range(h):
-        t = y / max(h - 1, 1)
-        d.line([(0, y), (w, y)], fill=tuple(int(a + (b - a) * t) for a, b in zip(c1, c2)))
-    return img
-
-
-def gold_text(img, x, y, text, f):
-    """Right-aligned text at x filled with the vertical gold gradient."""
-    mask = Image.new("L", img.size, 0)
-    kw = {"direction": "rtl"} if RAQM else {}
-    ImageDraw.Draw(mask).text((x, y), shape(text), font=f, fill=255, anchor="ra", **kw)
-    box = mask.getbbox()
-    if box:
-        fill = gradient((box[2] - box[0], box[3] - box[1]), GOLD_HI, GOLD_LO)
-        img.paste(fill, box[:2], mask.crop(box))
-
-
-def logo(size):
-    im = Image.open(LOGO).convert("RGB").resize((size, size), Image.LANCZOS)
-    m = Image.new("L", (size, size), 0)
-    ImageDraw.Draw(m).ellipse((0, 0, size - 1, size - 1), fill=255)
-    return im, m
+def title_lines(spec, f, max_w):
+    raw = spec.get("title_lines") or spec.get("title", "")
+    if isinstance(raw, list):
+        return raw[:2]
+    parts = [p.strip() for p in raw.replace("|", "\n").split("\n") if p.strip()]
+    if len(parts) >= 2:
+        return parts[:2]
+    words = raw.split()
+    if width(f, raw) <= max_w or len(words) < 2:
+        return [raw]
+    # split into two lines of similar width
+    best = min(range(1, len(words)), key=lambda i: abs(width(f, " ".join(words[:i])) - width(f, " ".join(words[i:]))))
+    return [" ".join(words[:best]), " ".join(words[best:])]
 
 
 def render(spec, out):
-    img = gradient((W, H), BG_TOP, BG_BOTTOM)
+    kind = spec.get("kind", "tip")
+    tag0, label0, cta0 = DEFAULTS.get(kind, DEFAULTS["tip"])
+    tag = spec.get("tag") or tag0
+    label = spec.get("label") or spec.get("badge") or label0
+    sub = spec.get("sub") or spec.get("hook") or ""
+    points = [p for p in spec.get("points", []) if p][:5]
+    follow = spec.get("follow") or FOLLOW
+    cta = spec.get("cta") or cta0
+    warn = spec.get("warn")
 
-    # warm glow + faint grid + code glyphs, like the cover
-    glow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    g = ImageDraw.Draw(glow)
-    g.ellipse((-300, -250, 600, 600), fill=GOLD + (60,))
-    g.ellipse((500, 950, 1400, 1700), fill=GOLD + (40,))
-    glow = glow.filter(ImageFilter.GaussianBlur(140))
-    img.paste(glow, (0, 0), glow)
-    d = ImageDraw.Draw(img, "RGBA")
-    for x in range(0, W, 60):
-        d.line([(x, 0), (x, H)], fill=GOLD + (10,))
-    for y in range(0, H, 60):
-        d.line([(0, y), (W, y)], fill=GOLD + (10,))
-    marks = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    md, mono = ImageDraw.Draw(marks), font(64, 800)
-    for txt, xy in (("</>", (440, 88)), ("#", (40, 470)), ("AI", (80, 1100)), ("fn", (930, 1100))):
-        md.text(xy, txt, font=mono, fill=GOLD + (28,))
-    img.paste(marks, (0, 0), marks)
-    d = ImageDraw.Draw(img, "RGBA")
+    img = Image.new("RGB", (S, S), CREAM)
+    d = ImageDraw.Draw(img)
+    for y in range(13, S, 26):  # dotted page
+        for x in range(13, S, 26):
+            d.ellipse((x - 1.6, y - 1.6, x + 1.6, y + 1.6), fill=INK)
 
-    right = W - PAD
-    # logo (top-left) and gold-outlined pill with green dot (top-right)
-    lg, lm = logo(96)
-    img.paste(lg, (PAD, 70), lm)
-    d.ellipse((PAD - 3, 67, PAD + 99, 169), outline=GOLD + (140,), width=3)
-    bf = font(34, 800)
-    label = spec.get("badge") or BADGES.get(spec.get("kind"), BADGES["trend"])
-    bw = tlen(bf, label) + 92
-    d.rounded_rectangle((right - bw, 86, right, 152), 33, fill=(20, 15, 8, 230), outline=GOLD + (170,), width=2)
-    d.ellipse((right - 44, 111, right - 28, 127), fill=(74, 222, 128))
-    rtl(d, right - 60, 90, label, bf, GOLD)
+    # sheet with hard offset shadow (down-left, as in the RTL design)
+    L, T, R, B = 52, 50, S - 52, S - 50
+    d.rounded_rectangle((L - 13, T + 13, R - 13, B + 13), 34, fill=INK)
+    d.rounded_rectangle((L, T, R, B), 34, fill=PAPER, outline=INK, width=5)
+    il, ir, it, ib = L + 5 + 40, R - 5 - 40, T + 5 + 36, B - 5 - 30
+    inner_w = ir - il
 
-    # title: white, last line in gold (single line -> all gold)
-    size, lines = fit(spec["title"], W - 2 * PAD, 4, 92, 52)
-    tf = font(size, 900)
-    y = 215
-    for i, ln in enumerate(lines):
-        if i == len(lines) - 1:
-            gold_text(img, right, y, ln, tf)
-        else:
-            rtl(d, right, y, ln, tf, (255, 255, 255))
-        y += int(size * 1.45)
-    y += 34
-    d.line([(right - 360, y), (right, y)], fill=GOLD + (200,), width=3)
-    y += 34
+    # top pills: coral tag on the right, teal label on the far left
+    _, _, ph = pill(d, ir, it, tag, font(24, 900), CORAL, PAPER)
+    pill(d, None, it + 2, label, font(21, 800), TEAL, PAPER, pad_x=20, h=ph - 4, left=il)
+    y = it + ph + 22
 
-    hook = spec.get("hook")
-    if hook:
-        hf = font(38, 600)
-        for ln in wrap(hook, hf, W - 2 * PAD)[:3]:
-            rtl(d, right, y, ln, hf, (235, 226, 205))
-            y += 60
-        y += 22
-
-    # numbered point cards
-    pf = font(34, 700)
-    footer_top = H - 150
-    for i, p in enumerate(spec.get("points", [])[:4], 1):
-        lines = wrap(p, pf, W - 2 * PAD - 130)[:2]
-        h = 44 + 52 * len(lines)
-        if y + h > footer_top - 20:
+    # title: each line in its own gold box
+    size = {4: 64, 5: 56}.get(len(points), 76)  # more outlines -> smaller title
+    while size > 44:
+        tf = font(size, 900)
+        lines = title_lines(spec, tf, inner_w - 40)
+        if all(width(tf, ln) <= inner_w - 40 for ln in lines):
             break
-        d.rounded_rectangle((PAD, y, right, y + h), 24, fill=(255, 220, 140, 14), outline=GOLD + (70,), width=2)
-        cx = right - 50
-        d.ellipse((cx - 30, y + h / 2 - 30, cx + 30, y + h / 2 + 30), fill=GOLD)
-        d.text((cx, y + h / 2), str(i), font=font(34, 900), fill=(15, 11, 5), anchor="mm")
-        ty = y + 18
-        for ln in lines:
-            rtl(d, right - 100, ty, ln, pf, (255, 255, 255))
-            ty += 52
-        y += h + 18
+        size -= 4
+    for ln in lines:
+        w = width(tf, ln)
+        h = int(size * 1.36)
+        d.rounded_rectangle((ir - w - 36, y, ir, y + h), 14, fill=GOLD, outline=INK, width=4)
+        text_at(d, (ir - 18, y + h / 2 + 2), ln, tf, INK, anchor="rm")
+        y += h + 10
+    y += 8
 
-    # footer: gold rule, brand in gold, page link
-    d.rectangle((0, footer_top + 30, W, H), fill=(0, 0, 0, 120))
-    d.line([(0, footer_top + 30), (W, footer_top + 30)], fill=GOLD + (120,), width=2)
-    gold_text(img, right, footer_top + 60, BRAND, font(40, 900))
-    note = spec.get("footer") or "تابع الصفحة ليوصلك كل جديد"
-    d.text((PAD, footer_top + 70), shape(note), font=font(30, 600), fill=(235, 226, 205),
-           **({"direction": "rtl"} if RAQM else {}))
+    if sub:
+        sf = font(29, 600)
+        for ln in wrap(sub, sf, inner_w)[:2]:
+            text_at(d, (ir, y), ln, sf, MUTED)
+            y += 41
+        y += 18
+
+    # bottom block, laid out upwards from the sheet's inner bottom
+    foot_line = ib - 29 - 4 - 20 - 26 + 6
+    foot_mid = (foot_line + ib) / 2 + 8
+    follow_h = 28 + 2 * 14 + 8
+    follow_top = foot_line - 26 - follow_h
+
+    # outline cards, shrunk until they fit between the subtitle and the follow pill
+    room = follow_top - 20 - y
+    for fs, pad, gap, nb in ((30, 16, 14, 50), (28, 13, 12, 46), (26, 10, 10, 42), (24, 7, 8, 40), (22, 5, 6, 36)):
+        pf = font(fs, 700)
+        rows = [wrap(p, pf, inner_w - 40 - nb - 16 - 8)[:2] for p in points]
+        heights = [max(nb, len(r) * int(fs * 1.3)) + 2 * pad + 8 for r in rows]
+        total = sum(heights) + gap * (len(rows) - 1)
+        if total <= room:
+            break
+    cy = y + max(0, (room - total) / 2)
+    for i, (r, h) in enumerate(zip(rows, heights), 1):
+        is_warn = warn == i
+        d.rounded_rectangle((il, cy, ir, cy + h), 20, fill=WARN_BG if is_warn else CREAM, outline=INK, width=4)
+        bx = ir - 4 - 20
+        mid = cy + h / 2
+        d.rounded_rectangle((bx - nb, mid - nb / 2, bx, mid + nb / 2), 14, fill=CORAL if is_warn else GOLD, outline=INK, width=4)
+        text_at(d, (bx - nb / 2, mid + 1), str(i).translate(AR_DIGITS), font(nb // 2 + 1, 900),
+                PAPER if is_warn else INK, anchor="mm")
+        lh = int(fs * 1.3)
+        ty = mid - lh * len(r) / 2 + lh / 2
+        for ln in r:
+            text_at(d, (bx - nb - 16, ty + 1), ln, pf, INK, anchor="rm")
+            ty += lh
+        cy += h + gap
+
+    # follow pill (full width, offset shadow)
+    d.rounded_rectangle((il - 6, follow_top + 6, ir - 6, follow_top + follow_h + 6), follow_h // 2, fill=INK)
+    d.rounded_rectangle((il, follow_top, ir, follow_top + follow_h), follow_h // 2, fill=GOLD, outline=INK, width=4)
+    ff = font(28, 900)
+    while width(ff, follow) > inner_w - 40 and ff.size > 20:
+        ff = font(ff.size - 2, 900)
+    text_at(d, ((il + ir) / 2, follow_top + follow_h / 2 + 1), follow, ff, INK, anchor="mm")
+
+    # footer: rule, brand + </> chip on the right, teal CTA on the left
+    d.line((il, foot_line, ir, foot_line), fill=INK, width=4)
+    bf = font(29, 900)
+    text_at(d, (ir, foot_mid), BRAND, bf, INK, anchor="rm")
+    chip_r = ir - width(bf, BRAND) - 10
+    cf = font(24, 900)
+    cw = cf.getlength("</>") + 22
+    d.rounded_rectangle((chip_r - cw, foot_mid - 22, chip_r, foot_mid + 22), 12, fill=GOLD, outline=INK, width=4)
+    d.text((chip_r - cw / 2, foot_mid + 1), "</>", font=cf, fill=INK, anchor="mm")
+    pill(d, None, foot_mid - 24, cta, font(24, 800), TEAL, PAPER, pad_x=20, h=48, left=il)
+
     img.save(out, "PNG", optimize=True)
     return out
 
