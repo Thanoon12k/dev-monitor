@@ -1,0 +1,66 @@
+{% extends "base.html" %}{% block title %}جلسات دورة تطبيق الموبايل{% endblock %}{% block body %}
+<style>
+.cz-hero{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.cz-hero .emoji{font-size:48px}
+.bar{height:10px;border-radius:99px;background:var(--panel2);overflow:hidden;border:1px solid var(--line)}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,#f59e0b,#fde047);transition:width .3s}
+.sess{border-inline-start:6px solid #f59e0b}
+.sess.done{border-inline-start-color:var(--good)}
+.sess.locked{opacity:.6}
+.sess summary{cursor:pointer;list-style:none;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.sess summary::-webkit-details-marker{display:none}
+.sess h2{margin:0;font-size:20px;flex:1;min-width:200px}
+.pill{font-size:12px;padding:3px 10px;border-radius:99px;background:var(--panel2);border:1px solid var(--line);color:var(--muted);font-weight:700}
+.pill.now{background:#f59e0b;color:#2a1a00;border-color:transparent}
+.pill.ok{background:var(--good);color:#04210f;border-color:transparent}
+.steps{list-style:none;padding:0;margin:14px 0 0}
+.steps li{display:flex;gap:10px;align-items:flex-start;padding:8px 6px;border-bottom:1px solid var(--line)}
+.steps li:last-child{border-bottom:0}
+.steps input{width:20px;height:20px;flex:none;margin-top:3px;accent-color:#f59e0b;cursor:pointer}
+.steps label{margin:0;font-size:15px;color:var(--text);cursor:pointer;flex:1}
+.steps li.task label{color:#f59e0b;font-weight:700}
+.steps li.is-done label{text-decoration:line-through;color:var(--muted)}
+.cz-note{margin-top:10px;min-height:60px}
+.saved{font-size:12px;color:var(--good);opacity:0;transition:opacity .3s}.saved.on{opacity:1}
+</style>
+<div class="card cz-hero">
+  <span class="emoji">📱</span>
+  <div style="flex:1;min-width:220px">
+    <h2 style="margin:0">جلسات دورة تطبيق الموبايل</h2>
+    <p class="mute" style="margin:4px 0 10px">Flutter + Claude Code · 8 جلسات × ساعتين · ما ننتقل للجلسة اللي بعدها إلا بعد إكمال مهام السابقة</p>
+    <div class="bar"><i id="allBar" style="width:{{ pct }}%"></i></div>
+    <p class="mute" style="margin:6px 0 0"><b id="allCount">{{ count }}</b> / {{ total }} خطوة · <b id="allPct">{{ pct }}</b>%
+    {% if current %} · الجلسة الحالية: <b>{{ current }}</b>{% else %} · 🎓 الكورس مكتمل{% endif %}</p>
+  </div>
+</div>
+{% for s in sessions %}
+<details class="card sess{% if s.complete %} done{% endif %}{% if s.locked %} locked{% endif %}" data-n="{{ s.n }}" {% if s.n == current %}open{% endif %}>
+  <summary>
+    <span style="font-size:28px">{{ s.emoji }}</span>
+    <h2>الجلسة {{ s.n }}: {{ s.title }}</h2>
+    <span class="pill">⏱️ ساعتين</span>
+    {% if s.complete %}<span class="pill ok">✔ مكتملة</span>{% elif s.n == current %}<span class="pill now">الحالية</span>{% elif s.locked %}<span class="pill">🔒 بعد إكمال السابقة</span>{% endif %}
+    <span class="pill"><b class="c">{{ s.count }}</b>/{{ s.total }}</span>
+  </summary>
+  <div class="bar" style="margin-top:12px"><i class="sb" style="width:{{ s.pct }}%"></i></div>
+  <ul class="steps">{% for it in s.steps %}
+    <li class="{% if it.task %}task{% endif %}{% if it.done %} is-done{% endif %}">
+      <input type="checkbox" id="k{{ it.key }}" data-key="{{ it.key }}" {% if it.done %}checked{% endif %}>
+      <label for="k{{ it.key }}">{{ it.text }}</label></li>{% endfor %}
+  </ul>
+  <textarea class="cz-note" data-n="{{ s.n }}" placeholder="ملاحظات الجلسة (التاريخ، شنو صار، شنو باقي)...">{{ s.note }}</textarea>
+  <span class="saved">✔ انحفظت</span>
+</details>
+{% endfor %}
+<script>
+(function(){
+var csrf={{ csrf|tojson }},TOTAL={{ total }};
+function post(u,d){var f=new FormData();f.append("csrf",csrf);for(var k in d)f.append(k,d[k]);return fetch(u,{method:"POST",body:f,credentials:"same-origin"}).then(function(r){if(!r.ok)throw 0;return r.json()})}
+function refresh(){var all=0;document.querySelectorAll(".sess").forEach(function(s){var b=s.querySelectorAll(".steps input"),c=0;b.forEach(function(x){if(x.checked)c++});all+=c;s.querySelector(".c").textContent=c;s.querySelector(".sb").style.width=Math.round(100*c/b.length)+"%";s.classList.toggle("done",c===b.length)});
+document.getElementById("allCount").textContent=all;var p=Math.round(100*all/TOTAL);document.getElementById("allPct").textContent=p;document.getElementById("allBar").style.width=p+"%"}
+document.querySelectorAll(".steps input").forEach(function(cb){cb.addEventListener("change",function(){var li=cb.closest("li");li.classList.toggle("is-done",cb.checked);refresh();
+post("{{ url_for('course.toggle') }}",{key:cb.dataset.key}).then(function(r){if(r.done!==cb.checked){cb.checked=r.done;li.classList.toggle("is-done",r.done);refresh()}}).catch(function(){cb.checked=!cb.checked;li.classList.toggle("is-done",cb.checked);refresh();alert("ما انحفظ، جرب مرة ثانية")})})});
+document.querySelectorAll(".cz-note").forEach(function(t){var tm;t.addEventListener("input",function(){clearTimeout(tm);tm=setTimeout(function(){post("{{ url_for('course.note') }}",{n:t.dataset.n,note:t.value}).then(function(){var s=t.nextElementSibling;s.classList.add("on");setTimeout(function(){s.classList.remove("on")},1200)})},700)})});
+})();
+</script>
+{% endblock %}

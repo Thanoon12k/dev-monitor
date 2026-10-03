@@ -44,6 +44,8 @@ TOOLS = [
     ("مدير إعلان الكود الذهبي", "الحملات، الطلبيات، والتواصل عبر واتساب", "📣", "/goldencode/"),
     ("مدير LinkedIn", "جدولة ونشر البوستات تلقائياً", "💼", "/linkedin/"),
     ("رائج · Viraliq", "منشورات الترند اليومية مع موافقة من تيليجرام", "🔥", "/viraliq/"),
+    ("جلسات دورة تطبيق الموبايل", "8 جلسات × ساعتين، چك لست لكل جلسة", "📱", "/course/"),
+    ("أول 10 دولار", "عشر طرق أونلاين للربح، ومعطيات تنطيها لـ Claude ويتحقق منها", "💵", "/money/"),
 ]
 
 
@@ -117,3 +119,9 @@ app.register_blueprint(goldencode_bp, url_prefix="/goldencode")
 
 from tools.viraliq import bp as viraliq_bp  # noqa: E402
 app.register_blueprint(viraliq_bp, url_prefix="/viraliq")
+
+from tools.course import bp as course_bp  # noqa: E402
+app.register_blueprint(course_bp, url_prefix="/course")
+
+from tools.money import bp as money_bp  # noqa: E402
+app.register_blueprint(money_bp, url_prefix="/money")

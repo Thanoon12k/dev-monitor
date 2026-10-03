@@ -1,0 +1,136 @@
+{% extends "base.html" %}{% block title %}أول 10 دولار{% endblock %}{% block body %}
+<style>
+.mz-hero{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.mz-hero .emoji{font-size:48px}
+.bar{height:10px;border-radius:99px;background:var(--panel2);overflow:hidden;border:1px solid var(--line)}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,#16a34a,#4ade80);transition:width .3s}
+.goal{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.goal input{width:130px}
+.warn{background:rgba(255,107,129,.10);border:1px solid rgba(255,107,129,.35);color:var(--text);padding:10px 14px;border-radius:12px;margin:0 0 14px;font-size:14px}
+.pill{font-size:12px;padding:3px 10px;border-radius:99px;background:var(--panel2);border:1px solid var(--line);color:var(--muted);font-weight:700;white-space:nowrap}
+.pill.ok{background:var(--good);color:#04210f;border-color:transparent}
+.pill.wrong{background:var(--bad);color:#2a0008;border-color:transparent}
+.pill.sent{background:#f59e0b;color:#2a1a00;border-color:transparent}
+.pill.claude{background:#6d28d9;color:#fff;border-color:transparent}
+/* inputs */
+.inp{border-inline-start:6px solid var(--line);padding:14px}
+.inp.ok{border-inline-start-color:var(--good)}.inp.wrong{border-inline-start-color:var(--bad)}.inp.sent{border-inline-start-color:#f59e0b}
+.inp h3{margin:0;font-size:17px;flex:1;min-width:180px;font-family:var(--sans)}
+.inp .hint{margin:4px 0 8px;font-size:13px;color:var(--muted)}
+.inp .note{margin:8px 0 0;font-size:14px;padding:8px 10px;border-radius:10px;background:var(--panel2)}
+.inp .note.wrong{color:var(--bad)}.inp .note.ok{color:var(--good)}
+.inp form.v{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start}
+.inp form.v textarea,.inp form.v input{flex:1;min-width:200px}
+.inp textarea{min-height:80px}
+.mini{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.mini button{padding:6px 12px;font-size:13px}
+.igrid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr))}
+.igrid .card{margin:0}
+/* plan */
+.plan{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr))}
+.plan .card{margin:0}
+.sec summary{cursor:pointer;list-style:none;display:flex;gap:10px;align-items:center}
+.sec summary::-webkit-details-marker{display:none}
+.sec h3{margin:0;font-size:17px;flex:1;font-family:var(--sans)}
+.steps{list-style:none;padding:0;margin:10px 0 0}
+.steps li{display:flex;gap:8px;align-items:flex-start;padding:7px 4px;border-bottom:1px solid var(--line)}
+.steps li:last-child{border-bottom:0}
+.steps input{width:20px;height:20px;flex:none;margin-top:3px;accent-color:#16a34a;cursor:pointer}
+.steps label{margin:0;font-size:14px;color:var(--text);cursor:pointer;flex:1}
+.steps li.is-done label{text-decoration:line-through;color:var(--muted)}
+.who{font-size:11px;padding:2px 8px;border-radius:99px;font-weight:700;flex:none;margin-top:3px}
+.who.you{background:var(--accent);color:#1a0e05}.who.me{background:#6d28d9;color:#fff}
+</style>
+
+<div class="card mz-hero">
+  <span class="emoji">💵</span>
+  <div style="flex:1;min-width:220px">
+    <h2 style="margin:0">أول 10 دولار (≈15 ألف دينار)</h2>
+    <p class="mute" style="margin:4px 0 10px">كلها أونلاين. عشر طرق بالتوازي، وحدة منها لازم تنجح. <span class="who you">إنت</span> تنشر وتتواصل وتستلم، و<span class="who me">Claude</span> يبحث ويجهز ويكتب ويتحقق.</p>
+    <div class="bar"><i id="allBar" style="width:{{ pct }}%"></i></div>
+    <p class="mute" style="margin:6px 0 0"><b id="allCount">{{ count }}</b> / {{ total }} خطوة · <b id="allPct">{{ pct }}</b>%</p>
+    <form class="goal" method="post" action="{{ url_for('money.earned') }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <span>💰 اللي وصل لحد هسه:</span><input name="earned" inputmode="numeric" value="{{ earned }}"><span>دينار</span>
+      <button class="btn ghost">حفظ</button>
+      {% if earned >= 15000 %}<span class="pill ok">🎉 الهدف تحقق</span>{% endif %}
+    </form>
+  </div>
+</div>
+
+<h2 id="inputs">📥 المعطيات: إنت تنطيني، وأنا أتحقق</h2>
+<div class="warn">🔒 لا تكتب هنا PIN البطاقة ولا CVV ولا رمز OTP. رقم الاستلام يكفي حتى الناس تحوّل عليك. التوكنات تنحفظ بملف منفصل على السيرفر وتنعرض مخفية، والسيرفر يتحقق منها بنفسه.</div>
+<p class="mute">
+  <span class="pill">⬜ فارغ {{ stats.empty }}</span>
+  <span class="pill sent">⏳ بانتظار المراجعة {{ stats.sent }}</span>
+  <span class="pill ok">✔ صح {{ stats.ok }}</span>
+  <span class="pill wrong">✗ يحتاج تصليح {{ stats.wrong }}</span>
+</p>
+<div class="igrid">
+{% for it in inputs %}
+<div class="card inp {{ it.status }}">
+  <div class="row">
+    <h3>{{ it.label }}</h3>
+    {% if it.by == 'claude' %}<span class="pill claude">طلب Claude</span>{% endif %}
+    <span class="pill">{{ kinds[it.kind] }}</span>
+    {% if it.status == 'ok' %}<span class="pill ok">✔ صح</span>{% elif it.status == 'wrong' %}<span class="pill wrong">✗ غلط</span>{% elif it.status == 'sent' %}<span class="pill sent">⏳ بالمراجعة</span>{% endif %}
+  </div>
+  {% if it.hint %}<p class="hint">{{ it.hint }}</p>{% endif %}
+  <form class="v" method="post" action="{{ url_for('money.save_input', iid=it.id) }}" autocomplete="off">
+    <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="act" value="save">
+    {% if it.kind == 'long' %}<textarea name="value" placeholder="اكتب هنا...">{{ it.value }}</textarea>
+    {% elif it.kind in secret_kinds %}<input type="password" name="value" placeholder="{{ it.value or 'الصق هنا' }}" autocomplete="new-password">
+    {% else %}<input name="value" value="{{ it.value }}" placeholder="اكتب هنا..." {% if it.kind in ('pay','phone') %}inputmode="numeric"{% endif %}>{% endif %}
+    <button>إرسال</button>
+  </form>
+  {% if it.note %}<p class="note {{ it.status }}">{% if it.note_by == 'claude' %}🤖 Claude: {% elif it.note_by == 'server' %}🛰️ فحص تلقائي: {% endif %}{{ it.note }}</p>{% endif %}
+  <div class="mini">
+    {% if it.status in ('sent','wrong') %}
+    <form method="post" action="{{ url_for('money.save_input', iid=it.id) }}"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="act" value="mine_ok"><button class="btn ghost">✔ أني متأكد إنها صح</button></form>
+    {% endif %}
+    {% if it.by != 'plan' %}
+    <form method="post" action="{{ url_for('money.save_input', iid=it.id) }}" onsubmit="return confirm('تمسح هاي الخانة؟')"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="act" value="delete"><button class="btn ghost">🗑️ مسح</button></form>
+    {% endif %}
+    {% if it.at %}<span class="mute" style="align-self:center">{{ it.at }}</span>{% endif %}
+  </div>
+</div>
+{% endfor %}
+<div class="card inp">
+  <h3>➕ معلومة جديدة</h3>
+  <p class="hint">أي شي تحتاج تنطيني ياه: اسم، تفصيل، رابط، توكن...</p>
+  <form method="post" action="{{ url_for('money.new_input') }}" autocomplete="off">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>العنوان</label><input name="label" required maxlength="120" placeholder="مثلاً: اسم صاحب المولدة">
+    <label>النوع</label><select name="kind">{% for k, v in kinds.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select>
+    <label>القيمة</label><textarea name="value" placeholder="اختياري هسه، تگدر تعبيها بعدين"></textarea>
+    <div style="margin-top:10px"><button>إضافة</button></div>
+  </form>
+</div>
+</div>
+
+<h2 style="margin-top:30px">🗺️ الخطة</h2>
+<div class="plan">
+{% for s in sections %}
+<details class="card sec" open>
+  <summary><span style="font-size:24px">{{ s.emoji }}</span><h3>{{ s.title }}</h3><span class="pill"><b class="c">{{ s.count }}</b>/{{ s.total }}</span></summary>
+  <div class="bar" style="margin-top:10px"><i class="sb" style="width:{{ s.pct }}%"></i></div>
+  <ul class="steps">{% for it in s.steps %}
+    <li class="{% if it.done %}is-done{% endif %}">
+      <input type="checkbox" id="k{{ it.key }}" data-key="{{ it.key }}" {% if it.done %}checked{% endif %}>
+      <span class="who {{ it.who }}">{{ 'إنت' if it.who == 'you' else 'Claude' }}</span>
+      <label for="k{{ it.key }}">{{ it.text }}</label></li>{% endfor %}
+  </ul>
+</details>
+{% endfor %}
+</div>
+<script>
+(function(){
+var csrf={{ csrf|tojson }},TOTAL={{ total }};
+function refresh(){var all=0;document.querySelectorAll(".sec").forEach(function(s){var b=s.querySelectorAll(".steps input"),c=0;b.forEach(function(x){if(x.checked)c++});all+=c;s.querySelector(".c").textContent=c;s.querySelector(".sb").style.width=Math.round(100*c/b.length)+"%"});
+document.getElementById("allCount").textContent=all;var p=Math.round(100*all/TOTAL);document.getElementById("allPct").textContent=p;document.getElementById("allBar").style.width=p+"%"}
+document.querySelectorAll(".steps input").forEach(function(cb){cb.addEventListener("change",function(){var li=cb.closest("li");li.classList.toggle("is-done",cb.checked);refresh();
+var f=new FormData();f.append("csrf",csrf);f.append("key",cb.dataset.key);
+fetch("{{ url_for('money.toggle') }}",{method:"POST",body:f,credentials:"same-origin"}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(r){if(r.done!==cb.checked){cb.checked=r.done;li.classList.toggle("is-done",r.done);refresh()}}).catch(function(){cb.checked=!cb.checked;li.classList.toggle("is-done",cb.checked);refresh();alert("ما انحفظ، جرب مرة ثانية")})})});
+})();
+</script>
+{% endblock %}
