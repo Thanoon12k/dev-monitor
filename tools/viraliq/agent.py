@@ -92,14 +92,20 @@ def ping(run, stage, msg):
 def llm(user, system=RULES, tries=3):
     body = {"model": MODEL, "temperature": 0.7, "response_format": {"type": "json_object"},
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}
-    headers = {"Authorization": "Bearer " + os.environ["GITHUB_TOKEN"], "Content-Type": "application/json"}
+    headers = {"Authorization": "Bearer " + os.environ["GITHUB_TOKEN"], "Content-Type": "application/json",
+               "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"}
     for i in range(tries):
         r = requests.post(MODELS, headers=headers, json=body, timeout=120)
         if r.status_code == 429 and i < tries - 1:
             time.sleep(30 * (i + 1))
             continue
-        r.raise_for_status()
-        return json.loads(r.json()["choices"][0]["message"]["content"])
+        try:
+            content = r.json()["choices"][0]["message"]["content"]
+            content = re.sub(r"^```(?:json)?\s*|\s*```$", "", content.strip())
+            return json.loads(content)
+        except (ValueError, KeyError, IndexError) as e:
+            raise RuntimeError(f"model reply HTTP {r.status_code}: {r.text[:300]}") from e
+    raise RuntimeError("model rate limit")
     raise RuntimeError("model rate limit")
 
 
@@ -237,6 +243,7 @@ def main(run):
                 log("request", q["id"], r.get("tick"))
                 ping("request", "done", q["topic"][:80])
             except Exception as e:  # noqa: BLE001
+                log("request failed:", e)
                 ping("request", "error", f"{q['topic'][:60]}: {e}")
             hub.post("/api/requests", {"id": q["id"]})
         return
