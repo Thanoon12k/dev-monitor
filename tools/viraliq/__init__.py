@@ -105,7 +105,7 @@ def tg(cfg, method, files=None, **params):
     try:
         return requests.post(TG.format(cfg["token"], method), data=data, files=files, timeout=30).json()
     except (requests.RequestException, ValueError) as e:
-        return {"ok": False, "description": str(e)}
+        return {"ok": False, "description": str(e).replace(cfg["token"], "<token>")}
 
 
 def keyboard(pid, p=None):
