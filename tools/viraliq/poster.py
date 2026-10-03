@@ -20,6 +20,7 @@ from PIL import Image, ImageDraw, ImageFont, features
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FONT = os.path.join(HERE, "fonts", "Cairo.ttf")
+LOGO = os.path.join(HERE, "assets", "logo.png")
 RAQM = features.check("raqm")
 S = 1080
 
@@ -199,11 +200,18 @@ def render(spec, out):
         ff = font(ff.size - 2, 900)
     text_at(d, ((il + ir) / 2, follow_top + follow_h / 2 + 1), follow, ff, INK, anchor="mm")
 
-    # footer: rule, brand + </> chip on the right, teal CTA on the left
+    # footer: rule, round logo in the bottom-right corner (fixed), brand + </> chip, teal CTA on the left
     d.line((il, foot_line, ir, foot_line), fill=INK, width=4)
+    lg = 58
+    logo = Image.open(LOGO).convert("RGB").resize((lg, lg), Image.LANCZOS)
+    mask = Image.new("L", (lg, lg), 0)
+    ImageDraw.Draw(mask).ellipse((0, 0, lg - 1, lg - 1), fill=255)
+    lx, ly = int(ir - lg), int(foot_mid - lg / 2)
+    img.paste(logo, (lx, ly), mask)
+    d.ellipse((lx - 2, ly - 2, lx + lg + 1, ly + lg + 1), outline=INK, width=4)
     bf = font(29, 900)
-    text_at(d, (ir, foot_mid), BRAND, bf, INK, anchor="rm")
-    chip_r = ir - width(bf, BRAND) - 10
+    text_at(d, (lx - 12, foot_mid), BRAND, bf, INK, anchor="rm")
+    chip_r = lx - 12 - width(bf, BRAND) - 10
     cf = font(24, 900)
     cw = cf.getlength("</>") + 22
     d.rounded_rectangle((chip_r - cw, foot_mid - 22, chip_r, foot_mid + 22), 12, fill=GOLD, outline=INK, width=4)
