@@ -345,6 +345,22 @@ def watchdog(cfg, posts):
 
 def on_callback(cfg, posts, cq):
     action, _, rest = cq.get("data", "").partition(":")
+    if action == "menu":
+        tg(cfg, "answerCallbackQuery", callback_query_id=cq["id"])
+        if rest == "create":
+            cfg["await"] = {"kind": "wiz", "step": 0, "data": {}}
+            say(cfg, "✍️ نسوي منشور خطوة بخطوة (للإلغاء: /cancel)\n\n" + WIZARD[0][1], reply_markup={"force_reply": True})
+        elif rest == "quick":
+            say(cfg, HELP_FORMAT)
+        elif rest == "ask":
+            cfg["await"] = {"kind": "ask"}
+            say(cfg, "🤖 اكتب الموضوع اللي تريد عنه منشور:", reply_markup={"force_reply": True})
+        elif rest == "queue":
+            show_queue(cfg, posts)
+        elif rest == "requests":
+            q = cfg.get("queue", [])
+            say(cfg, "\n".join(f"📝 {x['topic'][:80]}" for x in q) or "ماكو طلبات بالطابور.")
+        return
     pid = int(rest.split(":")[0]) if rest.split(":")[0].isdigit() else 0
     p = find(posts, pid)
     tg(cfg, "answerCallbackQuery", callback_query_id=cq["id"])
@@ -508,26 +524,104 @@ def compose(cfg, posts, msg, text):
     send_preview(cfg, p)
 
 
+HELP_FORMAT = ("⚡ تسوي منشور برسالة وحدة (ويا صورة إذا تحب) بهالشكل:\n\n"
+               "5 أسئلة | قبل التسليم\n"
+               "اسألهن لأي مبرمج قبل ما تنطيه مشروعك\n"
+               "- وريني شغل سابق يشبه مشروعي\n"
+               "- الكود راح يكون مالي؟\n"
+               "- شنو اللي ما راح يشمله السعر؟\n"
+               "تعليق: انت شنو تسأل قبل ما تدفع؟\n\n"
+               "السطر الأول العنوان (| تقسمه لسطرين)، الثاني جملة قصيرة، بعدها 3 إلى 5 نقاط تبدي بـ - أو رقم، "
+               "وسطر «تعليق:» إذا تريد تعليق أول.")
+COMMANDS = [("menu", "القائمة"), ("create", "أسوي منشور خطوة بخطوة"), ("post", "اطلب منشور عن موضوع"),
+            ("queue", "المنشورات المنتظرة"), ("help", "شلون أسوي منشور برسالة وحدة"), ("cancel", "إلغاء الخطوة الحالية")]
+
+
+def menu(cfg):
+    say(cfg, "شتريد تسوي؟ 👇", reply_markup={"inline_keyboard": [
+        [{"text": "✍️ أسوي منشور خطوة بخطوة", "callback_data": "menu:create"}],
+        [{"text": "⚡ منشور من رسالة وحدة", "callback_data": "menu:quick"}],
+        [{"text": "🤖 اطلب منشور عن موضوع", "callback_data": "menu:ask"}],
+        [{"text": "📋 المنشورات المنتظرة", "callback_data": "menu:queue"},
+         {"text": "📝 الطلبات", "callback_data": "menu:requests"}],
+    ]})
+
+
+def show_queue(cfg, posts):
+    q = [p for p in posts if p["status"] in ("pending", "approved")]
+    say(cfg, "\n".join(f"#{p['id']} {p['title'][:50]}\n   {status_line(p)}" for p in q) or "ماكو منشورات بالانتظار.")
+
+
+WIZARD = [  # (step, question)
+    ("title", "1️⃣ اكتب العنوان (قصير). إذا تريده سطرين افصل بينهم بـ |\nمثال: 5 أسئلة | قبل التسليم"),
+    ("sub", "2️⃣ جملة قصيرة تنكتب تحت العنوان (أو اكتب: لا)"),
+    ("points", "3️⃣ اكتب من 3 إلى 5 نقاط، كل نقطة بسطر"),
+    ("body", "4️⃣ تريد تكتب نص المنشور بنفسك؟ اكتبه هسه، أو اكتب: لا وأني أكتبه من النقاط"),
+    ("comment", "5️⃣ تعليق أول تحت المنشور؟ (رابط، سؤال...) أو اكتب: لا"),
+    ("photo", "6️⃣ تريد تستخدم صورتك بدل البوستر؟ دزها هسه، أو اكتب: لا"),
+]
+NO = ("لا", "لأ", "no", "-", "تخطي")
+
+
+def wizard_step(cfg, posts, msg, text):
+    w = cfg["await"]
+    step = WIZARD[w["step"]][0]
+    val = "" if text.strip().lower() in NO else text.strip()
+    if step == "title" and not val:
+        say(cfg, "العنوان ضروري 🙏 اكتبه:")
+        return
+    if step == "points":
+        pts = [BULLET.sub("", ln).strip() for ln in val.splitlines() if ln.strip()]
+        if not 3 <= len(pts) <= 5:
+            say(cfg, f"أحتاج من 3 إلى 5 نقاط، كل وحدة بسطر (هسه {len(pts)}). اكتبهن مرة ثانية:")
+            return
+        val = pts
+    if step == "photo" and msg.get("photo"):
+        val = "photo"
+    w["data"][step] = val
+    w["step"] += 1
+    if w["step"] < len(WIZARD):
+        say(cfg, WIZARD[w["step"]][1], reply_markup={"force_reply": True})
+        return
+    d = w["data"]
+    cfg.pop("await", None)
+    lines = [d["title"]] + ([d["sub"]] if d.get("sub") else []) + [f"- {pt}" for pt in d["points"]]
+    if d.get("body"):
+        lines += [d["body"]]
+    if d.get("comment"):
+        lines += ["تعليق: " + d["comment"]]
+    compose(cfg, posts, msg if d.get("photo") else {}, "\n".join(lines))
+
+
 def on_message(cfg, posts, msg):
     text = (msg.get("text") or msg.get("caption") or "").strip()
     wait = cfg.get("await") or {}
     if text.startswith("/"):
         cmd, _, arg = text.partition(" ")
         cmd = cmd.split("@")[0]
-        if cmd == "/skip":
+        if cmd in ("/skip", "/cancel"):
             cfg.pop("await", None)
-            say(cfg, "تمام، ما تغيّر شي.")
+            say(cfg, "تمام، لغيت الخطوة الحالية.")
+        elif cmd in ("/start", "/menu"):
+            menu(cfg)
+        elif cmd == "/create":
+            cfg["await"] = {"kind": "wiz", "step": 0, "data": {}}
+            say(cfg, "✍️ نسوي منشور خطوة بخطوة (للإلغاء: /cancel)\n\n" + WIZARD[0][1], reply_markup={"force_reply": True})
+        elif cmd == "/help":
+            say(cfg, HELP_FORMAT)
         elif cmd == "/channel":
             cfg["channel"] = arg.strip()
             say(cfg, f"📢 قناة النشر: {cfg['channel'] or 'بدون (تستلم المنشور بيدك)'}\n"
                      "لازم تضيف البوت أدمن بالقناة حتى يكدر ينشر.")
+        elif cmd == "/post" and not arg.strip():
+            cfg["await"] = {"kind": "ask"}
+            say(cfg, "🤖 اكتب الموضوع اللي تريد عنه منشور:", reply_markup={"force_reply": True})
         elif cmd == "/post":
             request_post(cfg, arg)
         elif cmd == "/postnow":
             request_post(cfg, arg, auto=True)
         elif cmd == "/queue":
-            q = [p for p in posts if p["status"] in ("pending", "approved")]
-            say(cfg, "\n".join(f"#{p['id']} {p['title'][:50]}\n   {status_line(p)}" for p in q) or "ماكو منشورات بالانتظار.")
+            show_queue(cfg, posts)
         else:
             say(cfg, "أهلاً 👋 أني بوت رائج (Viraliq).\nكل يوم الساعة 8 الصبح و8 بالليل أبحث عن الترند وأرسلك مسودات "
                      "منشورات مع بوستر، وانت توافق أو تعدّل أو تغيّر الوقت أو تلغي.\n\n"
@@ -541,6 +635,13 @@ def on_message(cfg, posts, msg):
                      "🚀 /postnow الموضوع: نفسه بس ينتشر مباشرة من يجهز.\n\n"
                      "/queue المنشورات المنتظرة\n/channel @اسم_القناة لتحديد قناة النشر التلقائي\n"
                      f"معرّف المحادثة: {msg['chat']['id']}")
+        return
+    if wait.get("kind") == "wiz":
+        wizard_step(cfg, posts, msg, text)
+        return
+    if wait.get("kind") == "ask":
+        cfg.pop("await", None)
+        request_post(cfg, text)
         return
     p = find(posts, wait.get("id", 0))
     if not p:  # free text (or a photo with a caption) outside an edit = compose a new post from it
