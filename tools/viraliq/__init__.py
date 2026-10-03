@@ -537,6 +537,8 @@ def on_message(cfg, posts, msg):
                      "بعدها 3 إلى 5 نقاط، كل نقطة تبدي بـ - أو رقم\n"
                      "وإذا تريد تعليق أول: سطر يبدي بـ «تعليق:»\n"
                      "وأني أسوي البوستر والنص، وانت تختار: تنشره هسه، تجدوله، أو تنشره بنفسك.\n\n"
+                     "🤖 /post الموضوع: الذكاء الاصطناعي يكتب المنشور كله عن الموضوع (خلال ربع ساعة).\n"
+                     "🚀 /postnow الموضوع: نفسه بس ينتشر مباشرة من يجهز.\n\n"
                      "/queue المنشورات المنتظرة\n/channel @اسم_القناة لتحديد قناة النشر التلقائي\n"
                      f"معرّف المحادثة: {msg['chat']['id']}")
         return
@@ -576,12 +578,11 @@ def on_message(cfg, posts, msg):
         send_preview(cfg, p)
 
 
-FIRE_BETA = "experimental-cc-routine-2026-04-01"
 MAX_REQUESTS_PER_DAY = 6
 
 
 def request_post(cfg, topic, auto=False):
-    """Start the on-demand Claude routine that researches `topic` and sends back a draft.
+    """Queue `topic` for the content agent (GitHub Actions + GitHub Models, polls every 15 min).
 
     With auto=True the finished post skips approval and is published as soon as it arrives.
     Returns the message shown to the owner (also sent on Telegram).
@@ -589,27 +590,17 @@ def request_post(cfg, topic, auto=False):
     topic = (topic or "").strip()
     if len(topic) < 3:
         return say_back(cfg, "اكتب الموضوع اللي تريد عنه منشور، مثلاً:\n/post أفضل 5 أدوات ذكاء اصطناعي مجانية للطلاب")
-    if not (cfg.get("fire_url") and cfg.get("fire_token")):
-        return say_back(cfg, "⚙️ ميزة الطلب تحتاج رابط وتوكن الـ API للروتين «Viraliq · طلب منشور». حطهم بلوحة /viraliq/ مرة وحدة.")
     day = f"{now():%Y-%m-%d}"
     used = cfg.get("requests", {}).get(day, 0)
     if used >= MAX_REQUESTS_PER_DAY:
         return say_back(cfg, f"وصلت حد اليوم ({MAX_REQUESTS_PER_DAY} طلبات). باجر نكمل 🙏")
     rid = secrets.token_hex(3)
-    try:
-        r = requests.post(cfg["fire_url"], timeout=30, json={"text": f"[req:{rid}] {topic[:1500]}"}, headers={
-            "Authorization": "Bearer " + cfg["fire_token"], "anthropic-beta": FIRE_BETA,
-            "anthropic-version": "2023-06-01"})
-        ok, err = r.ok, r.text[:300]
-    except requests.RequestException as e:
-        ok, err = False, str(e)
-    if not ok:
-        return say_back(cfg, f"⚠️ ما كدرت أشغّل الوكيل: {err}")
     cfg["requests"] = {day: used + 1}
+    cfg["queue"] = (cfg.get("queue", []) + [{"id": rid, "topic": topic[:1500], "at": now().isoformat()}])[-20:]
     if auto:
         cfg["auto_reqs"] = (cfg.get("auto_reqs", []) + [rid])[-20:]
-        return say_back(cfg, f"🔎 دا أبحث عن: «{topic[:200]}»\n🚀 من يجهز خلال 5 إلى 15 دقيقة ينتشر مباشرة بدون موافقة، ويوصلك هنا.")
-    return say_back(cfg, f"🔎 تمام، دا أبحث عن: «{topic[:200]}»\nالمسودة مع البوستر توصلك هنا خلال 5 إلى 15 دقيقة.")
+        return say_back(cfg, f"🔎 دا أكتب عن: «{topic[:200]}»\n🚀 من يجهز (خلال ربع ساعة تقريباً) ينتشر مباشرة بدون موافقة، ويوصلك هنا.")
+    return say_back(cfg, f"🔎 تمام، دا أكتب عن: «{topic[:200]}»\nالمسودة مع البوستر توصلك هنا خلال ربع ساعة تقريباً.")
 
 
 def say_back(cfg, text):
@@ -657,9 +648,47 @@ def ping():
     return "ok"
 
 
+OIDC_ISS = "https://token.actions.githubusercontent.com"
+OIDC_AUD = "viraliq"
+OIDC_REPO = "Thanoon12k/dev-monitor"
+_jwks = {"at": 0, "keys": {}}
+
+
+def _b64(s):
+    import base64
+    return base64.urlsafe_b64decode(s + "=" * (-len(s) % 4))
+
+
+def github_oidc_ok(token):
+    """True when `token` is a GitHub Actions OIDC token from this repo's main branch."""
+    import time
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.asymmetric import padding, rsa
+    try:
+        h64, p64, s64 = token.split(".")
+        header, claims = json.loads(_b64(h64)), json.loads(_b64(p64))
+        if header.get("alg") != "RS256":
+            return False
+        if header.get("kid") not in _jwks["keys"] or time.time() - _jwks["at"] > 3600:
+            keys = requests.get(OIDC_ISS + "/.well-known/jwks", timeout=20).json()["keys"]
+            _jwks.update(at=time.time(), keys={k["kid"]: k for k in keys})
+        k = _jwks["keys"][header["kid"]]
+        pub = rsa.RSAPublicNumbers(int.from_bytes(_b64(k["e"]), "big"), int.from_bytes(_b64(k["n"]), "big")).public_key()
+        pub.verify(_b64(s64), f"{h64}.{p64}".encode(), padding.PKCS1v15(), hashes.SHA256())
+    except Exception:  # noqa: BLE001 - any parse/verify problem means "not authorised"
+        return False
+    aud = claims.get("aud")
+    return (claims.get("iss") == OIDC_ISS and (aud == OIDC_AUD or (isinstance(aud, list) and OIDC_AUD in aud))
+            and claims.get("repository") == OIDC_REPO and claims.get("ref") == "refs/heads/main"
+            and claims.get("exp", 0) > time.time())
+
+
 def api_ok():
     key = _load(CFG, {}).get("api_key")
-    return bool(key) and secrets.compare_digest(request.headers.get("X-Key", ""), key)
+    if key and secrets.compare_digest(request.headers.get("X-Key", ""), key):
+        return True
+    auth = request.headers.get("Authorization", "")
+    return auth.startswith("Bearer ") and github_oidc_ok(auth[7:])
 
 
 @bp.route("/api/drafts", methods=["POST"])
@@ -698,7 +727,21 @@ def api_history():
     posts = _load(POSTS, [])
     course = sum(1 for p in posts if p.get("kind") == "course" and p.get("status") != "cancelled")
     return {"next_course_day": course + 1, "now": now().strftime("%Y-%m-%d %H:%M"),
-            "recent": [f"[{p.get('kind')}] {p['created'][:10]} {p['title']}" for p in posts[-40:]]}
+            "recent": [f"[{p.get('kind')}] {p['created'][:10]} {p['title']}" for p in posts[-40:]],
+            "used_sources": sorted({u for p in posts if p.get("status") != "cancelled" for u in p.get("sources", [])}),
+            "pending_courses": sum(1 for p in posts if p.get("kind") == "course" and p.get("status") == "pending")}
+
+
+@bp.route("/api/requests", methods=["GET", "POST"])
+def api_requests():
+    """GET: topics the owner asked for. POST {"id": ...}: mark one as handled."""
+    if not api_ok():
+        abort(403)
+    with state() as (cfg, _):
+        if request.method == "POST":
+            rid = (request.get_json(silent=True) or {}).get("id")
+            cfg["queue"] = [q for q in cfg.get("queue", []) if q["id"] != rid]
+        return {"queue": cfg.get("queue", [])}
 
 
 @bp.route("/routine.md")
@@ -769,9 +812,6 @@ def dashboard():
                 cfg["fb_off"] = bool(f.get("fb_off"))
                 if f.get("fb_token"):
                     cfg["fb_token"] = f["fb_token"].strip()
-                cfg["fire_url"] = f.get("fire_url", "").strip()
-                if f.get("fire_token"):
-                    cfg["fire_token"] = f["fire_token"].strip()
             flash("انحفظت الإعدادات")
         return redirect(url_for("viraliq.dashboard"))
     rep = tick()

@@ -1,0 +1,43 @@
+name: viraliq content
+# Writes the Golden Code page's drafts with GitHub Models and hands them to the hub.
+# No secrets: GitHub Models uses the workflow token, the hub checks the workflow's OIDC token.
+on:
+  schedule:
+    - cron: "41 4 * * *"            # 07:41 Baghdad -> morning drafts (course + news)
+    - cron: "41 16 * * *"           # 19:41 Baghdad -> evening draft (debate or tip)
+    - cron: "7,22,37,52 * * * *"    # every 15 min -> topics the owner asked for on Telegram
+  workflow_dispatch:
+    inputs:
+      run:
+        description: "morning, evening or requests"
+        default: requests
+permissions:
+  contents: read
+  models: read
+  id-token: write
+concurrency:
+  group: viraliq-content-${{ github.event.schedule || inputs.run }}
+  cancel-in-progress: false
+jobs:
+  write:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -q requests
+      - name: Write drafts
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          SCHEDULE: ${{ github.event.schedule }}
+          INPUT_RUN: ${{ inputs.run }}
+        run: |
+          case "$SCHEDULE" in
+            "41 4 * * *")  RUN=morning ;;
+            "41 16 * * *") RUN=evening ;;
+            "")            RUN="${INPUT_RUN:-requests}" ;;
+            *)             RUN=requests ;;
+          esac
+          python tools/viraliq/agent.py "$RUN"

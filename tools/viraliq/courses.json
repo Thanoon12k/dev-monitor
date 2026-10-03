@@ -1,0 +1,254 @@
+[
+ {
+  "title": "CS50x: مقدمة علوم الحاسوب",
+  "provider": "Harvard",
+  "url": "https://cs50.harvard.edu/x/",
+  "level": "مبتدئ",
+  "about": "أشهر دورة برمجة بالعالم: C وPython وSQL وأساسيات الويب، وشهادة إتمام مجانية"
+ },
+ {
+  "title": "Elements of AI",
+  "provider": "University of Helsinki",
+  "url": "https://www.elementsofai.com/",
+  "level": "مبتدئ",
+  "about": "تفهم الذكاء الاصطناعي بدون برمجة ولا رياضيات معقدة"
+ },
+ {
+  "title": "Kaggle Learn: Python",
+  "provider": "Kaggle",
+  "url": "https://www.kaggle.com/learn/python",
+  "level": "مبتدئ",
+  "about": "دروس بايثون قصيرة وتطبيق مباشر بالمتصفح وشهادة إتمام"
+ },
+ {
+  "title": "Prompting Essentials",
+  "provider": "Google",
+  "url": "https://grow.google/prompting-essentials/",
+  "level": "مبتدئ",
+  "about": "تعلّم تكتب أوامر واضحة لأدوات الذكاء الاصطناعي"
+ },
+ {
+  "title": "CS50P: بايثون",
+  "provider": "Harvard",
+  "url": "https://cs50.harvard.edu/python/",
+  "level": "مبتدئ",
+  "about": "دورة بايثون كاملة بمحاضرات وتمارين ومشروع نهائي"
+ },
+ {
+  "title": "Learning How to Learn",
+  "provider": "Coursera (UC San Diego)",
+  "url": "https://www.coursera.org/learn/learning-how-to-learn",
+  "level": "الكل",
+  "about": "شلون تتعلم أسرع وتتخلص من التأجيل، مجانية بخيار Audit"
+ },
+ {
+  "title": "Responsive Web Design",
+  "provider": "freeCodeCamp",
+  "url": "https://www.freecodecamp.org/learn/2022/responsive-web-design/",
+  "level": "مبتدئ",
+  "about": "HTML وCSS بمشاريع عملية وشهادة مجانية"
+ },
+ {
+  "title": "JavaScript Algorithms and Data Structures",
+  "provider": "freeCodeCamp",
+  "url": "https://www.freecodecamp.org/learn/javascript-algorithms-and-data-structures-v8/",
+  "level": "مبتدئ",
+  "about": "جافاسكربت من الصفر بمشاريع وشهادة مجانية"
+ },
+ {
+  "title": "The Odin Project",
+  "provider": "The Odin Project",
+  "url": "https://www.theodinproject.com/",
+  "level": "مبتدئ إلى متوسط",
+  "about": "مسار كامل لتطوير الويب مجاني ومفتوح المصدر"
+ },
+ {
+  "title": "Intro to Machine Learning",
+  "provider": "Kaggle",
+  "url": "https://www.kaggle.com/learn/intro-to-machine-learning",
+  "level": "مبتدئ",
+  "about": "أول نموذج تعلم آلة تبنيه بنفسك خلال ساعات"
+ },
+ {
+  "title": "Pandas",
+  "provider": "Kaggle",
+  "url": "https://www.kaggle.com/learn/pandas",
+  "level": "مبتدئ",
+  "about": "تحليل وتنظيف البيانات بمكتبة Pandas"
+ },
+ {
+  "title": "Intro to SQL",
+  "provider": "Kaggle",
+  "url": "https://www.kaggle.com/learn/intro-to-sql",
+  "level": "مبتدئ",
+  "about": "أساسيات SQL على بيانات حقيقية"
+ },
+ {
+  "title": "CS50 AI with Python",
+  "provider": "Harvard",
+  "url": "https://cs50.harvard.edu/ai/",
+  "level": "متوسط",
+  "about": "خوارزميات الذكاء الاصطناعي وتعلم الآلة ببايثون"
+ },
+ {
+  "title": "CS50 Web Programming",
+  "provider": "Harvard",
+  "url": "https://cs50.harvard.edu/web/",
+  "level": "متوسط",
+  "about": "تطوير مواقع بـ Python وDjango وJavaScript"
+ },
+ {
+  "title": "CS50 SQL",
+  "provider": "Harvard",
+  "url": "https://cs50.harvard.edu/sql/",
+  "level": "مبتدئ",
+  "about": "قواعد البيانات وSQL من الصفر"
+ },
+ {
+  "title": "CS50 Cybersecurity",
+  "provider": "Harvard",
+  "url": "https://cs50.harvard.edu/cybersecurity/",
+  "level": "مبتدئ",
+  "about": "أساسيات الأمن السيبراني لأي واحد يستخدم الإنترنت"
+ },
+ {
+  "title": "Machine Learning Crash Course",
+  "provider": "Google",
+  "url": "https://developers.google.com/machine-learning/crash-course",
+  "level": "متوسط",
+  "about": "دورة Google السريعة لتعلم الآلة بتمارين تفاعلية"
+ },
+ {
+  "title": "LLM Course",
+  "provider": "Hugging Face",
+  "url": "https://huggingface.co/learn/llm-course",
+  "level": "متوسط",
+  "about": "شلون تشتغل النماذج اللغوية وشلون تستخدمها ببرامجك"
+ },
+ {
+  "title": "Practical Deep Learning for Coders",
+  "provider": "fast.ai",
+  "url": "https://course.fast.ai/",
+  "level": "متوسط",
+  "about": "التعلم العميق بطريقة عملية من أول درس"
+ },
+ {
+  "title": "Introduction to CS and Programming in Python",
+  "provider": "MIT OpenCourseWare",
+  "url": "https://ocw.mit.edu/courses/6-0001-introduction-to-computer-science-and-programming-in-python-fall-2016/",
+  "level": "مبتدئ",
+  "about": "محاضرات MIT الأصلية لبايثون وعلوم الحاسوب"
+ },
+ {
+  "title": "GitHub Skills",
+  "provider": "GitHub",
+  "url": "https://skills.github.com/",
+  "level": "مبتدئ",
+  "about": "تعلم Git وGitHub بتمارين داخل GitHub نفسه"
+ },
+ {
+  "title": "Your first Flutter app",
+  "provider": "Google Codelabs",
+  "url": "https://codelabs.developers.google.com/codelabs/flutter-codelab-first",
+  "level": "مبتدئ",
+  "about": "أول تطبيق Flutter خطوة بخطوة"
+ },
+ {
+  "title": "Android Basics with Compose",
+  "provider": "Google",
+  "url": "https://developer.android.com/courses/android-basics-compose/course",
+  "level": "مبتدئ",
+  "about": "تطبيقات أندرويد بـ Kotlin وJetpack Compose"
+ },
+ {
+  "title": "Python for Everybody",
+  "provider": "Coursera (University of Michigan)",
+  "url": "https://www.coursera.org/specializations/python",
+  "level": "مبتدئ",
+  "about": "سلسلة بايثون الشهيرة، مجانية بخيار Audit"
+ },
+ {
+  "title": "Computer Programming",
+  "provider": "Khan Academy",
+  "url": "https://www.khanacademy.org/computing/computer-programming",
+  "level": "مبتدئ",
+  "about": "البرمجة بطريقة ممتعة ومرئية، مناسبة للصغار والكبار"
+ },
+ {
+  "title": "ChatGPT Prompt Engineering for Developers",
+  "provider": "DeepLearning.AI",
+  "url": "https://www.deeplearning.ai/short-courses/chatgpt-prompt-engineering-for-developers/",
+  "level": "متوسط",
+  "about": "استخدام النماذج اللغوية ببرامجك عن طريق الـ API"
+ },
+ {
+  "title": "Generative AI for Beginners",
+  "provider": "Microsoft",
+  "url": "https://github.com/microsoft/generative-ai-for-beginners",
+  "level": "مبتدئ",
+  "about": "21 درس عن بناء تطبيقات بالذكاء الاصطناعي التوليدي"
+ },
+ {
+  "title": "ML for Beginners",
+  "provider": "Microsoft",
+  "url": "https://github.com/microsoft/ML-For-Beginners",
+  "level": "مبتدئ",
+  "about": "منهج 12 أسبوع لتعلم الآلة الكلاسيكي"
+ },
+ {
+  "title": "Web Dev for Beginners",
+  "provider": "Microsoft",
+  "url": "https://github.com/microsoft/Web-Dev-For-Beginners",
+  "level": "مبتدئ",
+  "about": "منهج 12 أسبوع لتطوير الويب بمشاريع"
+ },
+ {
+  "title": "Intro to Deep Learning",
+  "provider": "Kaggle",
+  "url": "https://www.kaggle.com/learn/intro-to-deep-learning",
+  "level": "متوسط",
+  "about": "أول شبكة عصبية بـ TensorFlow وKeras"
+ },
+ {
+  "title": "Data Visualization",
+  "provider": "Kaggle",
+  "url": "https://www.kaggle.com/learn/data-visualization",
+  "level": "مبتدئ",
+  "about": "رسومات بيانية واضحة بمكتبة Seaborn"
+ },
+ {
+  "title": "Get started with C#",
+  "provider": "Microsoft Learn",
+  "url": "https://learn.microsoft.com/en-us/training/paths/get-started-c-sharp-part-1/",
+  "level": "مبتدئ",
+  "about": "أساسيات لغة C# بتمارين بالمتصفح"
+ },
+ {
+  "title": "Introduction to AI on Azure",
+  "provider": "Microsoft Learn",
+  "url": "https://learn.microsoft.com/en-us/training/paths/introduction-to-ai-on-azure/",
+  "level": "مبتدئ",
+  "about": "مفاهيم الذكاء الاصطناعي وخدماته السحابية"
+ },
+ {
+  "title": "Scientific Computing with Python",
+  "provider": "freeCodeCamp",
+  "url": "https://www.freecodecamp.org/learn/scientific-computing-with-python/",
+  "level": "مبتدئ",
+  "about": "بايثون بمشاريع عملية وشهادة مجانية"
+ },
+ {
+  "title": "Developer Roadmaps",
+  "provider": "roadmap.sh",
+  "url": "https://roadmap.sh/",
+  "level": "الكل",
+  "about": "خرائط واضحة لأي مسار برمجي: شنو تتعلم وبأي ترتيب"
+ },
+ {
+  "title": "Learn Flutter",
+  "provider": "Flutter",
+  "url": "https://docs.flutter.dev/get-started/learn-flutter",
+  "level": "مبتدئ",
+  "about": "الطريق الرسمي لتعلم Flutter"
+ }
+]
