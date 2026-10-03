@@ -4,8 +4,9 @@
     python tools/viraliq/agent.py evening    # a practical tip or a debate
     python tools/viraliq/agent.py requests   # topics the owner asked for on Telegram
 
-Writes with GitHub Models (the workflow's GITHUB_TOKEN, permission models: read) and talks to
-the hub with the workflow's OIDC token (permission id-token: write), so no secrets are needed.
+Writes with a free AI API: Groq (secret GROQ_API_KEY) or Google Gemini (secret GEMINI_API_KEY),
+whichever is set; with neither it exits quietly. Talks to the hub with the workflow's OIDC token
+(permission id-token: write), so the hub needs no shared secret.
 News comes from public RSS feeds; courses from the checked list in courses.json. The model may
 only use facts from what it is given; every draft keeps its source links.
 """
@@ -21,8 +22,15 @@ from email.utils import parsedate_to_datetime
 import requests
 
 HUB = "https://apps1monitor.pythonanywhere.com/viraliq"
-MODELS = "https://models.github.ai/inference/chat/completions"
-MODEL = os.environ.get("VIRALIQ_MODEL", "openai/gpt-4.1")
+PROVIDERS = [  # (env var with the key, OpenAI-compatible endpoint, model)
+    ("GROQ_API_KEY", "https://api.groq.com/openai/v1/chat/completions", "openai/gpt-oss-120b"),
+    ("GEMINI_API_KEY", "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", "gemini-2.5-flash"),
+]
+
+
+def provider():
+    return next(((os.environ[k], url, os.environ.get("VIRALIQ_MODEL", m)) for k, url, m in PROVIDERS
+                 if os.environ.get(k)), None)
 TZ = timezone(timedelta(hours=3))
 HERE = os.path.dirname(os.path.abspath(__file__))
 FEEDS = [
@@ -90,12 +98,12 @@ def ping(run, stage, msg):
 
 
 def llm(user, system=RULES, tries=3):
-    body = {"model": MODEL, "temperature": 0.7, "response_format": {"type": "json_object"},
+    key, url, model = provider()
+    body = {"model": model, "temperature": 0.7, "response_format": {"type": "json_object"},
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}
-    headers = {"Authorization": "Bearer " + os.environ["GITHUB_TOKEN"], "Content-Type": "application/json",
-               "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"}
+    headers = {"Authorization": "Bearer " + key, "Content-Type": "application/json"}
     for i in range(tries):
-        r = requests.post(MODELS, headers=headers, json=body, timeout=120)
+        r = requests.post(url, headers=headers, json=body, timeout=120)
         if r.status_code == 429 and i < tries - 1:
             time.sleep(30 * (i + 1))
             continue
@@ -230,6 +238,9 @@ Stories: {json.dumps(items[:15], ensure_ascii=False)}""")
 
 
 def main(run):
+    if not provider():
+        log("no AI key (GROQ_API_KEY or GEMINI_API_KEY secret) - nothing to do")
+        return
     hub = Hub()
     if run == "requests":
         queue = hub.get("/api/requests")["queue"]

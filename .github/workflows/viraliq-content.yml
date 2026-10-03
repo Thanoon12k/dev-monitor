@@ -1,6 +1,7 @@
 name: viraliq content
-# Writes the Golden Code page's drafts with GitHub Models and hands them to the hub.
-# No secrets: GitHub Models uses the workflow token, the hub checks the workflow's OIDC token.
+# Writes the Golden Code page's drafts with a free AI API and hands them to the hub.
+# Needs ONE repository secret: GROQ_API_KEY (console.groq.com) or GEMINI_API_KEY (aistudio.google.com).
+# Without it the job exits quietly. The hub checks the workflow's OIDC token, no other secret needed.
 on:
   schedule:
     - cron: "41 4 * * *"            # 07:41 Baghdad -> morning drafts (course + news)
@@ -13,7 +14,6 @@ on:
         default: requests
 permissions:
   contents: read
-  models: read
   id-token: write
 concurrency:
   group: viraliq-content-${{ github.event.schedule || inputs.run }}
@@ -30,7 +30,8 @@ jobs:
       - run: pip install -q requests
       - name: Write drafts
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           SCHEDULE: ${{ github.event.schedule }}
           INPUT_RUN: ${{ inputs.run }}
         run: |
