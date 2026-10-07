@@ -136,6 +136,7 @@ def time_keyboard(pid):
 
 def status_line(p):
     return {
+        "held": f"🕗 جاهز، ينرسلك {fmt(p.get('release_at'))}",
         "pending": f"⏳ بانتظار موافقتك · الوقت المقترح: {fmt(p['suggested_at'])}",
         "approved": f"✅ مجدول للنشر: {fmt(p.get('scheduled_at'))}"
                     + (" · 📅 مجدول داخل فيسبوك" if p.get("fb_sched") else ""),
@@ -299,19 +300,25 @@ def tick():
             shutil.move(png, os.path.join(IMG, f"{pid}.png"))
             os.remove(path)
             sug = parse_time(d.get("suggested_at", "")) or now() + timedelta(hours=2)
+            rel = parse_time(d.get("release_at") or "")  # written ahead: hold until the morning/evening batch time
             posts.append({"id": pid, "kind": d.get("kind", "trend"), "title": d.get("title", ""),
                           "text": d.get("text", ""), "hashtags": d.get("hashtags", []),
                           "sources": d.get("sources", []), "comment": d.get("comment") or "",
                           "image": f"{pid}.png", "status": "pending",
+                          "release_at": rel.isoformat() if rel else None,
                           "suggested_at": sug.isoformat(), "created": now().isoformat(), "tg_msg": None})
             own = cfg.get("req_photos", {}).pop(d.get("request") or "", None)
             if own and os.path.exists(os.path.join(IMG, own)):
                 posts[-1]["user_photo"] = own
+            if rel and rel > now():
+                posts[-1]["status"] = "held"
             if d.get("request") and d["request"] in cfg.get("auto_reqs", []):
                 cfg["auto_reqs"].remove(d["request"])
                 posts[-1].update(status="approved", scheduled_at=now().isoformat(), auto=True)
             report["ingested"] += 1
         for p in posts:
+            if p["status"] == "held" and datetime.fromisoformat(p["release_at"]) <= now():
+                p["status"], p["released"] = "pending", now().isoformat()
             if p["status"] in ("pending", "approved") and p.get("auto") and not p.get("tg_msg") and cfg.get("token"):
                 report["sent"] += send_preview(cfg, p)
             elif p["status"] == "pending" and not p.get("tg_msg") and cfg.get("token"):
@@ -338,7 +345,8 @@ def watchdog(cfg, posts):
         if not cfg.get("token") or n < start + timedelta(minutes=45) or n > start + timedelta(hours=3) \
                 or key in cfg.get("alerted", []):
             continue
-        if not any(datetime.fromisoformat(p["created"]) >= start for p in posts):
+        if not any(datetime.fromisoformat(p.get("released") or p["created"]) >= start
+                   or (p["status"] == "held" and p["release_at"][:10] == f"{start:%Y-%m-%d}") for p in posts):
             say(cfg, f"⚠️ مسودات {name} ({hour}:00) ما وصلت لحد هسه. الوكيل المجدول ما اشتغل أو فشل؛ "
                      "افتح Claude وكله يشغّل دفعة اليوم.")
         cfg["alerted"] = (cfg.get("alerted", []) + [key])[-10:]
@@ -554,7 +562,7 @@ def menu(cfg):
 
 
 def show_queue(cfg, posts):
-    q = [p for p in posts if p["status"] in ("pending", "approved")]
+    q = [p for p in posts if p["status"] in ("held", "pending", "approved")]
     say(cfg, "\n".join(f"#{p['id']} {p['title'][:50]}\n   {status_line(p)}" for p in q) or "ماكو منشورات بالانتظار.")
 
 
@@ -835,7 +843,7 @@ def api_drafts():
         base = os.path.join(INBOX, f"{stamp}-api{i}")
         render(spec, base + ".png")
         meta = {k: d.get(k) for k in ("kind", "title", "text", "hashtags", "suggested_at", "sources", "request",
-                                      "comment")}
+                                      "comment", "release_at")}
         _save(base + ".json", meta)
         names.append(d["title"])
     return {"ok": True, "queued": names, "tick": tick()}
@@ -850,7 +858,7 @@ def api_history():
     return {"next_course_day": course + 1, "now": now().strftime("%Y-%m-%d %H:%M"),
             "recent": [f"[{p.get('kind')}] {p['created'][:10]} {p['title']}" for p in posts[-40:]],
             "used_sources": sorted({u for p in posts if p.get("status") != "cancelled" for u in p.get("sources", [])}),
-            "pending_courses": sum(1 for p in posts if p.get("kind") == "course" and p.get("status") == "pending")}
+            "pending_courses": sum(1 for p in posts if p.get("kind") == "course" and p.get("status") in ("held", "pending"))}
 
 
 @bp.route("/api/requests", methods=["GET", "POST"])

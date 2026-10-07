@@ -70,6 +70,8 @@ Write the drafts to `/tmp/drafts.json` (a JSON list, UTF-8):
   "poster": {"tag": "نصيحة", "label": "قبل ما تدفع", "title": "٥ أسئلة | قبل التسليم",
              "sub": "…", "points": ["…", "…", "…"], "cta": "احفظه"}}]
 ```
+Optional `"release_at": "YYYY-MM-DD HH:MM"` (Baghdad) holds a draft written ahead of time and sends it
+to the owner only at that time (use 08:00 / 20:00 of its day).
 then POST it to `$H/api/drafts` as above. The reply must contain `"ok": true` and a `tick`
 with `"sent"` ≥ 1; otherwise ping stage=error with the reply. Work autonomously: nobody is
 watching this session, never stop to ask a question.
