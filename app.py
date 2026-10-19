@@ -3,12 +3,13 @@
 Each tool lives in tools/<name>/ as a Blueprint and registers itself in TOOLS.
 The old LinkedIn Autopost app is mounted unchanged under /linkedin.
 The home page is open; each tool is locked with its own 4-digit PIN (hashes in data/hub.json,
-"pins"), the mounted LinkedIn app included (see wsgi.py). Five wrong PINs lock that tool for 15 minutes, doubling each time up to a day.
+"pins"), the mounted LinkedIn app included (see wsgi.py). A device stays unlocked for 5 days. Five wrong PINs lock that tool for 15 minutes, doubling each time up to a day.
 """
 import json
 import os
 import secrets
 import time
+from datetime import timedelta
 from functools import wraps
 
 from flask import Flask, abort, flash, redirect, render_template, request, session, url_for
@@ -39,7 +40,7 @@ if not _c.get("secret_key"):
     _c["secret_key"] = secrets.token_hex(32)
     save_cfg(_c)
 app.secret_key = _c["secret_key"]
-app.config.update(SESSION_COOKIE_NAME="hub_session", SESSION_COOKIE_SECURE=True,
+app.config.update(PERMANENT_SESSION_LIFETIME=timedelta(days=5), SESSION_COOKIE_NAME="hub_session", SESSION_COOKIE_SECURE=True,
                   SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax")
 
 # Registry of sub-pages shown on the home page: (title, description, icon, url)
@@ -49,10 +50,11 @@ TOOLS = [
     ("رائج · Viraliq", "منشورات الترند اليومية مع موافقة من تيليجرام", "🔥", "/viraliq/"),
     ("جلسات دورة تطبيق الموبايل", "8 جلسات × ساعتين، چك لست لكل جلسة", "📱", "/course/"),
     ("أول 10 دولار", "عشر طرق أونلاين للربح، ومعطيات تنطيها لـ Claude ويتحقق منها", "💵", "/money/"),
-    ("مدير السوشيال ميديا · SMM", "منشور واحد ينتشر بلينكدإن، فيسبوك، إنستغرام، تيك توك، تيليجرام والمدونة", "📤", "/social/"),
+    ("مدير السوشيال ميديا · SMM", "منشور واحد ينتشر بلينكدإن، فيسبوك، إنستغرام، تيك توك، يوتيوب، تيليجرام والمدونة", "📤", "/social/"),
 ]
 PIN_TOOLS = {u.strip("/"): (t, i) for t, d, i, u in TOOLS}  # blueprint name (or "linkedin") -> (title, icon)
-UNLOCK_HOURS = 12
+UNLOCK_HOURS = 5 * 24  # a device stays signed in to a tool for 5 days
+DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹", "01234567890123456789")  # Arabic/Persian keyboards
 
 
 def csrf_token():
@@ -112,13 +114,14 @@ def pin(tool):
     if request.method == "POST":
         check_csrf()
         f = request.form
-        pin_, wait = f.get("pin", "").strip(), lock_wait(c, tool)
+        pin_, wait = f.get("code", "").strip().translate(DIGITS), lock_wait(c, tool)
         if mode == "enter":
             if wait:
                 flash(f"مقفول بسبب محاولات غلط، جرّب بعد {wait // 60 + 1} دقيقة")
             elif check_password_hash(pins[tool], pin_):
                 c.get("pin_fail", {}).pop(tool, None)
                 save_cfg(c)
+                session.permanent = True
                 session["unlocked"] = {**{t: u for t, u in session.get("unlocked", {}).items() if u > time.time()},
                                        tool: time.time() + UNLOCK_HOURS * 3600}
                 return redirect(nxt)
@@ -129,9 +132,10 @@ def pin(tool):
                 if fail["n"] % 5 == 0:
                     fail["until"] = time.time() + min(900 * 2 ** (fail["n"] // 5 - 1), 86400)
                 save_cfg(c)
-                flash("الرمز غلط")
+                left = 5 - fail["n"] % 5
+                flash("الرمز غلط" + (f"، باقي {left} محاولات قبل القفل" if left < 5 else "، انقفلت مؤقتاً"))
         else:  # set or change
-            if not valid_pin(pin_) or pin_ != f.get("pin2", "").strip():
+            if not valid_pin(pin_) or pin_ != f.get("code2", "").strip().translate(DIGITS):
                 flash("الرمز لازم 4 أرقام، ونفسه بالخانتين")
             elif mode == "set" and c.get("password") and not check_password_hash(c["password"], f.get("password", "")):
                 time.sleep(1)
@@ -139,6 +143,7 @@ def pin(tool):
             else:
                 pins[tool] = generate_password_hash(pin_)
                 save_cfg(c)
+                session.permanent = True
                 session["unlocked"] = {**session.get("unlocked", {}), tool: time.time() + UNLOCK_HOURS * 3600}
                 flash("✅ انحفظ الرمز")
                 return redirect(nxt)

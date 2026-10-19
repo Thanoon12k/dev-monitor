@@ -2,7 +2,7 @@
 
 Write once (text, photo, video or music) from this page or from its Telegram bot; it is adapted
 per platform and published one platform after another to LinkedIn, a Facebook Page, Instagram,
-TikTok, a Telegram channel, the built-in blog (/social/blog) and optionally WordPress, with each
+TikTok, YouTube, a Telegram channel, the built-in blog (/social/blog) and optionally WordPress, with each
 result reported on Telegram. The core lives in tools/social/spm (same code as the
 Social-Platforms-Manager repo); its data sits in data/social/.
 Scheduled posts go out from /social/tick (called by the viraliq-tick workflow); "publish now"
@@ -22,7 +22,7 @@ BASE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 os.environ["SPM_DATA"] = os.environ.get("SPM_DATA") or os.path.join(BASE, "data", "social")
 
 from .spm import adapt, bot, engine, platforms, store  # noqa: E402
-from .spm.platforms import facebook, linkedin, tiktok  # noqa: E402
+from .spm.platforms import facebook, linkedin, tiktok, youtube  # noqa: E402
 from .spm.platforms.telegram import tg  # noqa: E402
 
 bp = Blueprint("social", __name__, template_folder="../../templates")
@@ -273,6 +273,14 @@ def save_account(f):
                 for k in ("token", "refresh", "expires", "refresh_expires", "open_id", "name", "username"):
                     tk.pop(k, None)
             flash("انحفظ تيك توك")
+        elif s == "youtube":
+            yt = store.section(cfg, "youtube")
+            keep(yt, f, "client_id", "client_secret")
+            yt["privacy"] = f.get("privacy", "public")
+            if f.get("disconnect"):
+                for k in ("token", "refresh", "expires", "channel_id", "name"):
+                    yt.pop(k, None)
+            flash("انحفظ يوتيوب")
         elif s == "wordpress":
             w = store.section(cfg, "wordpress")
             w["url"], w["user"] = f.get("url", "").strip(), f.get("user", "").strip()
@@ -309,7 +317,7 @@ def save_account(f):
 
 # ---------- OAuth (LinkedIn, TikTok) ----------
 
-OAUTH = {"linkedin": (linkedin, "client_id"), "tiktok": (tiktok, "client_key")}
+OAUTH = {"linkedin": (linkedin, "client_id"), "tiktok": (tiktok, "client_key"), "youtube": (youtube, "client_id")}
 
 
 def redirect_uri(name):
