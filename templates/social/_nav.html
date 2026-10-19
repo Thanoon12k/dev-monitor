@@ -1,0 +1,26 @@
+<style>
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:16px}
+.subnav{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.subnav a{padding:8px 12px;border-radius:10px;color:var(--text);border:1px solid var(--line);background:var(--panel)}
+.subnav a.on{background:var(--accent);color:#1a0e05;border-color:transparent;font-weight:700}
+.subnav b{font-size:20px;margin-inline-end:auto}
+textarea{min-height:110px;resize:vertical}input[type=checkbox]{width:auto}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);font-size:13px;margin:0;color:var(--text)}
+.chip input{margin:0}
+.ok{color:var(--good)}.bad{color:var(--bad)}.warn{color:#fbbf24}
+.pill{display:inline-block;padding:2px 10px;border-radius:999px;background:var(--panel2);border:1px solid var(--line);font-size:12px;white-space:nowrap}
+.plat{display:flex;gap:10px;align-items:center;padding:12px;border-radius:14px;background:var(--panel2);border:1px solid var(--line)}
+.plat .ico{font-size:24px}.plat small{display:block;color:var(--muted);font-size:12px}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--muted);flex:none;margin-inline-start:auto}.dot.on{background:var(--good)}
+code{background:var(--panel2);padding:2px 6px;border-radius:6px;font-size:12px;direction:ltr;unicode-bidi:embed;word-break:break-all}
+details summary{cursor:pointer;font-weight:700}
+button.ghost{background:var(--panel2);color:var(--text);border-color:var(--line);box-shadow:none}
+button.danger{background:transparent;color:var(--bad);border-color:rgba(255,107,129,.4);box-shadow:none}
+img.thumb,video.thumb{max-width:100%;max-height:280px;border-radius:12px;display:block}
+h2{font-size:20px;margin:0 0 12px}
+</style>
+<div class="subnav"><b>🛰️ مدير المنصات</b>
+<a href="{{ url_for('social.dashboard') }}" class="{{ 'on' if request.endpoint in ('social.dashboard', 'social.post_page') }}">الرئيسية</a>
+<a href="{{ url_for('social.accounts') }}" class="{{ 'on' if request.endpoint == 'social.accounts' }}">ربط المنصات</a>
+<a href="{{ url_for('social.log_page') }}" class="{{ 'on' if request.endpoint == 'social.log_page' }}">السجل</a>
+<a href="{{ url_for('social.blog_index') }}" target="_blank">المدونة ↗</a></div>

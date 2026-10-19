@@ -1,2 +1,5 @@
 flask>=3.0
 requests
+pillow
+arabic-reshaper
+python-bidi

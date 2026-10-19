@@ -1,5 +1,6 @@
 name: viraliq tick
-# Publishes approved Viraliq posts on time (the hub has no clock of its own).
+# Publishes approved Viraliq posts and scheduled "مدير المنصات" (/social) posts on time
+# (the hub has no clock of its own).
 on:
   schedule: [{cron: "*/10 * * * *"}]
   workflow_dispatch:
@@ -8,3 +9,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: curl -fsS https://apps1monitor.pythonanywhere.com/viraliq/tick
+      - run: curl -fsS -m 600 https://apps1monitor.pythonanywhere.com/social/tick

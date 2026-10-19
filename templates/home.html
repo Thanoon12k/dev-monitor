@@ -1,5 +1,7 @@
 {% extends "base.html" %}{% block body %}
 <div class="boxes">{% for t, d, i, u in tools %}
 <a class="box {{ ['c-sun','c-ocean','c-violet','c-teal','c-ember'][loop.index0 % 5] }}" style="--i:{{ loop.index0 }}" href="{{ u }}">
-<span class="emoji">{{ i }}</span><h3>{{ t }}</h3><div class="lbl">{{ d }}</div></a>{% endfor %}</div>
+<span class="emoji">{{ i }}</span><h3>{{ t }}</h3><div class="lbl">{{ d }}</div>
+{% if u != "/linkedin/" %}<span class="lockmark" title="{{ 'مفتوح' if u.strip('/') in open_tools else 'برمز' }}">{{ '🔓' if u.strip('/') in open_tools else '🔒' }}</span>{% endif %}</a>{% endfor %}</div>
+<style>.box{position:relative}.lockmark{position:absolute;top:16px;left:16px;font-size:20px}</style>
 {% endblock %}

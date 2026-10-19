@@ -58,7 +58,8 @@ transition:transform .25s cubic-bezier(.2,.8,.3,1.3),box-shadow .25s;animation:d
 </style></head><body>
 <header class="top"><a class="brand" href="/"><span class="brand-mark">🛰️</span><div><h1>apps<em>1monitor</em></h1><p class="tagline">كل أداة صندوق. افتحه، تابعه، وخلّصه.</p></div></a>
 <div class="top-actions"><button class="icon-btn" id="themeBtn" title="تبديل الثيم">◐</button>
-{% if session.admin %}<form method="post" action="/logout"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost">🔒 خروج</button></form>{% endif %}</div></header>
+{% if cur_tool %}<a class="btn ghost" href="/pin/{{ cur_tool }}?change=1&next=/{{ cur_tool }}/" title="تغيير رمز هذي الأداة">🔑</a>{% endif %}
+{% if any_unlocked %}<form method="post" action="/lock"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost" title="يقفل كل الأدوات المفتوحة">🔒 قفل الكل</button></form>{% endif %}</div></header>
 <main>{% for m in get_flashed_messages() %}<div class="flash">{{ m }}</div>{% endfor %}{% block body %}{% endblock %}</main>
 <script>document.getElementById("themeBtn").onclick=function(){var r=document.documentElement,t=r.dataset.theme==="light"?"dark":"light";r.dataset.theme=t;try{localStorage.setItem("theme",t)}catch(e){}}</script>
 </body></html>
