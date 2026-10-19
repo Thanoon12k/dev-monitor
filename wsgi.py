@@ -1,9 +1,13 @@
 """WSGI entry: the hub at /, the legacy LinkedIn app at /linkedin.
 
 /cron is forwarded to the LinkedIn app so the existing GitHub Actions job keeps working.
+The LinkedIn app is behind the hub's "linkedin" PIN: once it is unlocked in the hub, the app
+treats the visitor as its admin, so its own password is no longer asked for.
 """
 import os
 import sys
+import time
+from urllib.parse import quote
 
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
 
@@ -25,6 +29,20 @@ if os.path.isdir(LINKEDIN):
     spec.loader.exec_module(mod)
     os.chdir(cwd)
     mounts["/linkedin"] = mod.app
+    LINKEDIN_PUBLIC = ("/cron", "/health", "/favicon.svg", "/favicon.ico")
+
+    def hub_pin():
+        from flask import redirect, request, session
+        if request.path in LINKEDIN_PUBLIC:
+            return None
+        hub_session = hub.session_interface.open_session(hub, request) or {}
+        if hub_session.get("unlocked", {}).get("linkedin", 0) > time.time():
+            session["admin"] = True
+            return None
+        session.pop("admin", None)
+        return redirect("/pin/linkedin?next=" + quote(request.script_root + request.path))
+
+    mod.app.before_request_funcs.setdefault(None, []).insert(0, hub_pin)
 
     @hub.route("/cron")
     def cron_forward():

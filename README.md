@@ -10,8 +10,8 @@ Flask site on PythonAnywhere (apps1monitor.pythonanywhere.com) holding several a
 | `/viraliq/` | رائج · Viraliq: daily trend posts approved from Telegram (see `tools/viraliq/ROUTINE.md`) |
 | `/course/` | جلسات دورة تطبيق الموبايل: 8 sessions, checklist per session |
 | `/money/` | أول 10 دولار: 10 ways to earn, plus an inputs box the owner fills and Claude checks (`tools/money/review.py`) |
-| `/social/` | مدير المنصات: one post (text/photo/video/music) adapted and published to LinkedIn, Facebook, Instagram, TikTok, a Telegram channel and the blog at `/social/blog`, controlled from its own Telegram bot (same code as the Social-Platforms-Manager repo) |
-| `/linkedin/` | Legacy LinkedIn Autopost app, mounted unchanged from `/home/apps1monitor/linkedin` |
+| `/social/` | 📤 مدير السوشيال ميديا (SMM): one post (text/photo/video/music) adapted and published to LinkedIn, Facebook, Instagram, TikTok, a Telegram channel and the blog at `/social/blog`, controlled from its own Telegram bot (same code as the Social-Platforms-Manager repo) |
+| `/linkedin/` | Legacy LinkedIn Autopost app, mounted from `/home/apps1monitor/linkedin`; behind the hub's `linkedin` PIN instead of its own password (`wsgi.py`) |
 
 Add a tool: create `tools/<name>/__init__.py` with a Blueprint, register it in `app.py`, add it to `TOOLS`;
 its `@login_required` pages then ask for that tool's PIN (set on first visit, with the old site password if one exists).

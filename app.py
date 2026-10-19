@@ -3,7 +3,7 @@
 Each tool lives in tools/<name>/ as a Blueprint and registers itself in TOOLS.
 The old LinkedIn Autopost app is mounted unchanged under /linkedin.
 The home page is open; each tool is locked with its own 4-digit PIN (hashes in data/hub.json,
-"pins"). Five wrong PINs lock that tool for 15 minutes, doubling each time up to a day.
+"pins"), the mounted LinkedIn app included (see wsgi.py). Five wrong PINs lock that tool for 15 minutes, doubling each time up to a day.
 """
 import json
 import os
@@ -49,9 +49,9 @@ TOOLS = [
     ("رائج · Viraliq", "منشورات الترند اليومية مع موافقة من تيليجرام", "🔥", "/viraliq/"),
     ("جلسات دورة تطبيق الموبايل", "8 جلسات × ساعتين، چك لست لكل جلسة", "📱", "/course/"),
     ("أول 10 دولار", "عشر طرق أونلاين للربح، ومعطيات تنطيها لـ Claude ويتحقق منها", "💵", "/money/"),
-    ("مدير المنصات", "منشور واحد ينتشر بلينكدإن، فيسبوك، إنستغرام، تيك توك، تيليجرام والمدونة", "🛰️", "/social/"),
+    ("مدير السوشيال ميديا · SMM", "منشور واحد ينتشر بلينكدإن، فيسبوك، إنستغرام، تيك توك، تيليجرام والمدونة", "📤", "/social/"),
 ]
-PIN_TOOLS = {u.strip("/"): (t, i) for t, d, i, u in TOOLS if u != "/linkedin/"}  # blueprint name -> (title, icon)
+PIN_TOOLS = {u.strip("/"): (t, i) for t, d, i, u in TOOLS}  # blueprint name (or "linkedin") -> (title, icon)
 UNLOCK_HOURS = 12
 
 

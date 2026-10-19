@@ -19,7 +19,7 @@ button.danger{background:transparent;color:var(--bad);border-color:rgba(255,107,
 img.thumb,video.thumb{max-width:100%;max-height:280px;border-radius:12px;display:block}
 h2{font-size:20px;margin:0 0 12px}
 </style>
-<div class="subnav"><b>🛰️ مدير المنصات</b>
+<div class="subnav"><b>📤 مدير السوشيال ميديا</b>
 <a href="{{ url_for('social.dashboard') }}" class="{{ 'on' if request.endpoint in ('social.dashboard', 'social.post_page') }}">الرئيسية</a>
 <a href="{{ url_for('social.accounts') }}" class="{{ 'on' if request.endpoint == 'social.accounts' }}">ربط المنصات</a>
 <a href="{{ url_for('social.log_page') }}" class="{{ 'on' if request.endpoint == 'social.log_page' }}">السجل</a>
