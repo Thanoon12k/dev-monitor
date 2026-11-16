@@ -1,6 +1,6 @@
 {% extends "base.html" %}{% block title %}مدير إعلان الكود الذهبي{% endblock %}{% block body %}
 <div class="box c-sun hero-box" style="min-height:0"><div class="row" style="justify-content:space-between"><div class="row"><span class="emoji">📣</span><h2>مدير إعلان الكود الذهبي</h2></div>
-<div class="row"><a class="btn ghost" href="{{ url_for('goldencode.facebook') }}">🔗 فيسبوك</a><a class="btn ghost" href="{{ page }}" target="_blank">الصفحة</a><a class="btn wa" href="https://wa.me/{{ wa }}" target="_blank">واتساب</a></div></div></div>
+<div class="row"><a class="btn ghost" href="{{ url_for('goldencode.videos') }}">🎬 الفيديوهات</a><a class="btn ghost" href="{{ url_for('goldencode.facebook') }}">🔗 فيسبوك</a><a class="btn ghost" href="{{ page }}" target="_blank">الصفحة</a><a class="btn wa" href="https://wa.me/{{ wa }}" target="_blank">واتساب</a></div></div></div>
 <div class="grid">
 <div class="card stat"><span>كل الطلبيات</span><b>{{ s.n }}</b></div>
 <div class="card stat"><span>جديدة</span><b>{{ s.new or 0 }}</b></div>

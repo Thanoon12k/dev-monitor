@@ -1,0 +1,26 @@
+{% extends "base.html" %}{% block title %}الفيديوهات الإعلانية{% endblock %}{% block body %}
+<style>
+.vwrap{display:grid;grid-template-columns:minmax(260px,380px) 1fr;gap:18px;align-items:start}
+@media(max-width:760px){.vwrap{grid-template-columns:1fr}}
+.vplayer video{width:100%;aspect-ratio:9/16;border-radius:14px;background:#000;display:block}
+.specs{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0}.specs dt{color:var(--muted)}.specs dd{margin:0;font-weight:600}
+.vlist{display:flex;gap:10px;flex-wrap:wrap}.vlist a{display:flex;gap:10px;align-items:center}.vlist img{width:44px;border-radius:6px}
+</style>
+<div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">🎬 الفيديوهات الإعلانية</h2>
+<a class="btn ghost" href="{{ url_for('goldencode.dashboard') }}">رجوع</a></div>
+<div class="vlist" style="margin-top:12px">{% for x in videos %}<a class="tag {{ 'new' if v and x.slug==v.slug }}" href="{{ url_for('goldencode.videos', slug=x.slug) }}"><img src="{{ url_for('static', filename=x.poster) }}" alt="">{{ loop.index }}. {{ x.title }}</a>{% endfor %}</div></div>
+{% if v %}
+<div class="vwrap">
+<div class="card vplayer"><video controls playsinline preload="metadata" poster="{{ url_for('static', filename=v.poster) }}" src="{{ url_for('static', filename=v.file) }}"></video>
+<div class="row" style="margin-top:12px"><a class="btn" href="{{ url_for('static', filename=v.file) }}" download>⬇️ تحميل</a>
+<a class="btn wa" target="_blank" href="{{ gc_wa('', 'فيديو الإعلان: ' ~ url_for('static', filename=v.file, _external=True, _scheme='https')) }}">مشاركة واتساب</a></div></div>
+<div>
+<div class="card"><h3 style="margin-top:0">{{ v.title }}</h3><p class="mute" style="margin-top:0">{{ v.created }} · {{ v.status }}</p>
+<dl class="specs">{% for k, val in v.specs %}<dt>{{ k }}</dt><dd>{{ val }}</dd>{% endfor %}</dl>
+<p>{{ v.style }}</p></div>
+<div class="card"><h3 style="margin-top:0">المشاهد والتعليق الصوتي</h3><div class="scroll"><table><tr><th>الوقت</th><th>التعليق</th><th>الحركة</th></tr>
+{% for t, line, vis in v.scenes %}<tr><td>{{ t }}</td><td><b>{{ line }}</b></td><td class="mute">{{ vis }}</td></tr>{% endfor %}</table></div></div>
+<div class="card"><h3 style="margin-top:0">ملاحظات</h3><p class="mute" style="margin:0">{{ v.notes }}</p></div>
+</div></div>
+{% else %}<div class="card mute">ما أكو فيديوهات بعد.</div>{% endif %}
+{% endblock %}

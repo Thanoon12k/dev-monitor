@@ -46,13 +46,14 @@ app.config.update(PERMANENT_SESSION_LIFETIME=timedelta(days=5), SESSION_COOKIE_N
 # Registry of sub-pages shown on the home page: (title, description, icon, url)
 TOOLS = [
     ("مدير إعلان الكود الذهبي", "الحملات، الطلبيات، والتواصل عبر واتساب", "📣", "/goldencode/"),
+    ("دفتر الدين", "دفاتر منفصلة برمز خاص من 6 أرقام، مع التسديد والأرشيف", "🧾", "/debts/"),
     ("مدير LinkedIn", "جدولة ونشر البوستات تلقائياً", "💼", "/linkedin/"),
     ("رائج · Viraliq", "منشورات الترند اليومية مع موافقة من تيليجرام", "🔥", "/viraliq/"),
     ("جلسات دورة تطبيق الموبايل", "8 جلسات × ساعتين، چك لست لكل جلسة", "📱", "/course/"),
     ("أول 10 دولار", "عشر طرق أونلاين للربح، ومعطيات تنطيها لـ Claude ويتحقق منها", "💵", "/money/"),
     ("مدير السوشيال ميديا · SMM", "منشور واحد ينتشر بلينكدإن، فيسبوك، إنستغرام، تيك توك، يوتيوب، تيليجرام والمدونة", "📤", "/social/"),
 ]
-PIN_TOOLS = {u.strip("/"): (t, i) for t, d, i, u in TOOLS}  # blueprint name (or "linkedin") -> (title, icon)
+PIN_TOOLS = {u.strip("/"): (t, i) for t, d, i, u in TOOLS if u != "/debts/"}  # blueprint name (or "linkedin") -> (title, icon)
 UNLOCK_HOURS = 5 * 24  # a device stays signed in to a tool for 5 days
 DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹", "01234567890123456789")  # Arabic/Persian keyboards
 
@@ -189,3 +190,6 @@ app.register_blueprint(money_bp, url_prefix="/money")
 
 from tools.social import bp as social_bp  # noqa: E402
 app.register_blueprint(social_bp, url_prefix="/social")
+
+from tools.debts import bp as debts_bp  # noqa: E402
+app.register_blueprint(debts_bp, url_prefix="/debts")

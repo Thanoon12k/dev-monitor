@@ -156,6 +156,19 @@ def campaign(cid=None):
 # ---------- Facebook page link ----------
 
 PAGE_ID = "423528124186043"
+# ---------- ad videos ----------
+
+@bp.route("/videos")
+@bp.route("/videos/<slug>")
+@login_required
+def videos(slug=None):
+    from .videos import VIDEOS, get
+    cur = get(slug) if slug else (VIDEOS[0] if VIDEOS else None)
+    if slug and not cur:
+        abort(404)
+    return render_template("goldencode/videos.html", videos=VIDEOS, v=cur, wa=WHATSAPP)
+
+
 GRAPH = "https://graph.facebook.com/v21.0/"
 
 

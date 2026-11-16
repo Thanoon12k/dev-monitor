@@ -6,6 +6,8 @@ Flask site on PythonAnywhere (apps1monitor.pythonanywhere.com) holding several a
 |---|---|
 | `/` | Hub home (open, no password); each tool below is locked with its own 4-digit PIN (`/pin/<tool>`) |
 | `/goldencode/` | Golden Code ad manager: campaigns, orders, WhatsApp |
+| `/goldencode/videos` | Golden Code video ad library |
+| `/debts/` | دفتر الدين: separate 6-digit PIN per book, purchases, payments and archive |
 | `/goldencode/order?c=<id>` | Public order form to link from ads |
 | `/viraliq/` | رائج · Viraliq: daily trend posts approved from Telegram (see `tools/viraliq/ROUTINE.md`) |
 | `/course/` | جلسات دورة تطبيق الموبايل: 8 sessions, checklist per session |
@@ -18,3 +20,5 @@ its `@login_required` pages then ask for that tool's PIN (set on first visit, wi
 While a tool is open, 🔑 in the header changes its PIN. Five wrong PINs lock the tool for 15 min, doubling up to a day.
 
 Deploy: `deploy.sh` uploads files via the PythonAnywhere API (needs `apps1monitor_PA_TOKEN`).
+
+Note: `/debts/` uses its own 6-digit book PIN, not the 4-digit PIN used by other tools.
