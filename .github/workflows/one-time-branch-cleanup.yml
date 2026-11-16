@@ -1,0 +1,24 @@
+name: One-time branch cleanup
+on:
+  push:
+    paths:
+      - '.github/workflows/one-time-branch-cleanup.yml'
+permissions:
+  contents: write
+jobs:
+  remove-merged-branches:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete all non-main branches (all commits merged)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh api --paginate "repos/$GH_REPO/branches?per_page=100" --jq '.[].name' | while IFS= read -r branch; do
+            if [ "$branch" != "main" ]; then
+              encoded="$(jq -rn --arg v "$branch" '$v|@uri')"
+              echo "Deleting $branch"
+              gh api -X DELETE "repos/$GH_REPO/git/refs/heads/$encoded"
+            fi
+          done
